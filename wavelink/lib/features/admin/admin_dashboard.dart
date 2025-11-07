@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/features/admin/ai_recommendations_screen.dart';
 import 'package:wavelink/features/admin/analytics_dashboard.dart';
+import 'package:wavelink/features/admin/employee_management_screen.dart';
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
 
@@ -44,7 +45,12 @@ class AdminDashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const EmployeeManagementScreen(),
+                ),
+              );
             },
           ),
         ],
