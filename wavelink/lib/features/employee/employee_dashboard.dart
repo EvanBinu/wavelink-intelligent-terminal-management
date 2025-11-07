@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 
-class EmployeeDashboard extends StatelessWidget {
-  const EmployeeDashboard({Key? key}) : super(key: key);
+class EmployeeDashboardScreen extends StatelessWidget {
+  const EmployeeDashboardScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

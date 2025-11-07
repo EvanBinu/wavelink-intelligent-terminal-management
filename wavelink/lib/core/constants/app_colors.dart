@@ -8,6 +8,12 @@ class AppColors {
   static const red = Color(0xFFFF3B30);
   static const yellow = Color(0xFFFFCC00);
   static const green = Color(0xFF34C759);
+  
+  static const backgroundGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFFF5F5F5), white],
+  );
 }
 
 

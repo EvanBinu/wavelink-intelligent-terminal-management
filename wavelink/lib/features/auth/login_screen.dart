@@ -165,16 +165,16 @@ class _LoginScreenState extends State<LoginScreen> {
     Widget dashboard;
     switch (selectedRole) {
       case 'Admin':
-        dashboard = const AdminDashboard();
+        dashboard = const AdminDashboardScreen();
         break;
       case 'Employee':
-        dashboard = const EmployeeDashboard();
+        dashboard = const EmployeeDashboardScreen();
         break;
       case 'Passenger':
-        dashboard = const PassengerDashboard();
+        dashboard = const PassengerDashboardScreen();
         break;
       default:
-        dashboard = const AdminDashboard();
+        dashboard = const AdminDashboardScreen();
     }
     NavigationHelper.replaceWith(context, dashboard);
   }

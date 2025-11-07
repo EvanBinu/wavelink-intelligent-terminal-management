@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 
-class PassengerDashboard extends StatelessWidget {
-  const PassengerDashboard({Key? key}) : super(key: key);
+class PassengerDashboardScreen extends StatelessWidget {
+  const PassengerDashboardScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
