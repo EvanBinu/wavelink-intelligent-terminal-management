@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 
-class AnalyticsDashboard extends StatefulWidget {
-  const AnalyticsDashboard({Key? key}) : super(key: key);
+class AnalyticsDashboardScreen extends StatefulWidget {
+  const AnalyticsDashboardScreen({Key? key}) : super(key: key);
 
   @override
-  State<AnalyticsDashboard> createState() => _AnalyticsDashboardState();
+  State<AnalyticsDashboardScreen> createState() => _AnalyticsDashboardState();
 }
 
-class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
+class _AnalyticsDashboardState extends State<AnalyticsDashboardScreen> {
   String _selectedTimeFilter = 'Monthly';
   String _selectedTerminal = 'All Terminals';
 

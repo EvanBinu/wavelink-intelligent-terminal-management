@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/features/admin/ai_recommendations_screen.dart';
-
+import 'package:wavelink/features/admin/analytics_dashboard.dart';
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
 
@@ -15,7 +15,9 @@ class AdminDashboardScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications),
-            onPressed: () {},
+            onPressed: () {
+
+            },
           ),
           IconButton(
             icon: const Icon(Icons.psychology),
@@ -29,8 +31,21 @@ class AdminDashboardScreen extends StatelessWidget {
             },
           ),
           IconButton(
+          icon: const Icon(Icons.analytics),
+          onPressed: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AnalyticsDashboardScreen(),
+                ),
+              );
+          },
+        ),
+          IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () {},
+            onPressed: () {
+
+            },
           ),
         ],
       ),
