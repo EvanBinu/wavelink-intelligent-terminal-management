@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
-import 'package:wavelink/core/constants/app_strings.dart';
-import 'package:wavelink/core/utils/navigation_helper.dart';
-import 'package:wavelink/features/admin/widgets/kpi_card.dart';
-import 'package:wavelink/features/admin/widgets/feature_card.dart';
 import 'package:wavelink/features/admin/ai_recommendations_screen.dart';
-import 'package:wavelink/features/admin/analytics_dashboard.dart';
 
-class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+class AdminDashboardScreen extends StatelessWidget {
+  const AdminDashboardScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +185,7 @@ class AdminDashboard extends StatelessWidget {
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
