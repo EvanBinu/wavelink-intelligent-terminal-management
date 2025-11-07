@@ -127,6 +127,7 @@ class _EmployeeManagementScreenState extends State<EmployeeManagementScreen> {
       ),
       floatingActionButton: _buildAddButton(context),
     );
+    
   }
 
   PreferredSizeWidget _buildAppBar() {
