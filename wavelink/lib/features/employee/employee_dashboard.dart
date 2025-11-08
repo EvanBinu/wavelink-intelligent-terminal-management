@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
+import 'package:wavelink/core/constants/widgets/notification_dropdown.dart';
 import 'package:wavelink/features/employee/employee_history_screen.dart';
 
 class EmployeeDashboardScreen extends StatefulWidget {
@@ -10,108 +11,10 @@ class EmployeeDashboardScreen extends StatefulWidget {
 }
 
 class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
-  OverlayEntry? _notificationOverlay;
-
-  // 🔔 Notification dropdown toggle
-  void _toggleNotifications(BuildContext context) {
-    if (_notificationOverlay != null) {
-      _notificationOverlay!.remove();
-      _notificationOverlay = null;
-      return;
-    }
-
-    final overlay = Overlay.of(context);
-
-    _notificationOverlay = OverlayEntry(
-      builder: (context) => Positioned(
-        top: kToolbarHeight + 8,
-        right: 16,
-        width: 280,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.navy.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildNotificationItem(
-                  '⚙ Maintenance Due',
-                  'Generator inspection pending today',
-                  AppColors.aqua,
-                ),
-                _buildNotificationItem(
-                  '🧱 Repair Submitted',
-                  'Dock Light Replacement logged successfully',
-                  AppColors.green,
-                ),
-                _buildNotificationItem(
-                  '⚠ Safety Alert',
-                  'Slip hazard reported near Terminal 3',
-                  AppColors.red,
-                ),
-                const Divider(color: Colors.white24),
-                TextButton(
-                  onPressed: () {
-                    _notificationOverlay?.remove();
-                    _notificationOverlay = null;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const EmployeeHistoryScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'View All',
-                    style: TextStyle(color: AppColors.aqua, fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(_notificationOverlay!);
-  }
-
-  Widget _buildNotificationItem(String title, String subtitle, Color color) {
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        radius: 16,
-        backgroundColor: color.withOpacity(0.8),
-        child: const Icon(Icons.notifications, color: Colors.white, size: 16),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(color: Colors.white70, fontSize: 12),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBlue, // deep navy background
+      backgroundColor: AppColors.darkBlue, // Deep navy background
       appBar: AppBar(
         title: const Text(
           'Employee Dashboard',
@@ -119,14 +22,24 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: AppColors.headerGradient, // smooth aqua–navy blend
+            gradient: AppColors.headerGradient, // Smooth aqua–navy blend
           ),
         ),
         elevation: 4,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () => _toggleNotifications(context),
+            onPressed: () => NotificationDropdown.toggle(
+              context,
+              onViewAll: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EmployeeHistoryScreen(),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -144,6 +57,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // 🔧 Quick Action Cards
             _buildActionCard(
               context,
               '🧱 Report Repair / Upgrade',
@@ -183,7 +98,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 );
               },
             ),
+
             const SizedBox(height: 28),
+
+            // 🚨 Emergency Alert Button
             SizedBox(
               width: double.infinity,
               height: 60,
@@ -214,7 +132,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
-  // 🔧 Reuse your existing methods below
+  // 🌙 Action Card Widget
   Widget _buildActionCard(
     BuildContext context,
     String title,
@@ -276,6 +194,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
+  // 🧾 Report Dialog
   void _showReportDialog(BuildContext context, String type) {
     showDialog(
       context: context,
@@ -375,6 +294,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
+  // 🚨 Emergency Dialog with SOS Circle
   void _showEmergencyDialog(BuildContext context) {
     showDialog(
       context: context,

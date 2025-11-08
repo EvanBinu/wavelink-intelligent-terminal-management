@@ -52,4 +52,5 @@ class AppColors {
     end: Alignment.bottomCenter,
     colors: [green, teal],
   );
+  
 }
