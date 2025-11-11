@@ -1,142 +1,195 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
+import 'package:wavelink/core/utils/navigation_helper.dart';
 
-class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({super.key});
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final _emailController = TextEditingController();
-  bool _isDarkMode = false;
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
+    with SingleTickerProviderStateMixin {
+  final _email = TextEditingController();
+  late final AnimationController _bg;
+  bool _isDark = false;
 
-  final Color darkBackgroundStart = const Color(0xFF0D1B2A); 
-  final Color darkBackgroundEnd = const Color(0xFF1B263B);   
-  final Color darkCardColor = const Color(0xFF1B2A47).withOpacity(0.7);
-  final Color darkTextColor = Colors.white;
-  final Color darkHintColor = Colors.white70;
+  @override
+  void initState() {
+    super.initState();
+    _bg = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _bg.dispose();
+    _email.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final backgroundStart = _isDarkMode ? darkBackgroundStart : AppColors.aqua;
-    final backgroundEnd = _isDarkMode ? darkBackgroundEnd : AppColors.navy;
-    final cardColor = _isDarkMode ? darkCardColor : Colors.white.withOpacity(0.2);
-    final textColor = _isDarkMode ? darkTextColor : AppColors.navy;
-    final hintColor = _isDarkMode ? darkHintColor : Colors.black54;
-
+    final size = MediaQuery.of(context).size;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: _isDarkMode ? Colors.blueGrey.shade900 : AppColors.navy,
-        title: const Text("Forgot Password"),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [backgroundStart, backgroundEnd],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
+      body: Stack(
+        children: [
+          AnimatedBuilder(
+            animation: _bg,
+            builder:
+                (_, __) => CustomPaint(
+                  size: Size(size.width, size.height),
+                  painter: _BlobPainter(
+                    t: _bg.value,
+                    base1: AppColors.navy,
+                    base2: AppColors.aqua,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.lock_reset, size: 60, color: textColor),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Reset Your Password',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+                ),
+          ),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: const SizedBox.expand(),
+          ),
+
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color:
+                          _isDark
+                              ? Colors.white.withOpacity(0.06)
+                              : Colors.white.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.25)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Reset password',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.dark_mode, size: 18),
+                                Switch(
+                                  value: _isDark,
+                                  onChanged: (v) => setState(() => _isDark = v),
+                                  activeColor: AppColors.aqua,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      TextField(
-                        controller: _emailController,
-                        style: TextStyle(color: textColor),
-                        decoration: InputDecoration(
-                          labelText: 'Email / Phone',
-                          labelStyle: TextStyle(color: hintColor),
-                          prefixIcon: Icon(Icons.person, color: hintColor),
-                          enabledBorder: OutlineInputBorder(
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color:
+                                _isDark
+                                    ? Colors.white.withOpacity(0.06)
+                                    : Colors.white.withOpacity(0.7),
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: hintColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.aqua),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.navy,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.25),
                             ),
                           ),
-                          child: const Text(
-                            'Send Reset Link',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          child: TextField(
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter your account email',
+                              prefixIcon: Icon(Icons.email_outlined),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Dark Mode', style: TextStyle(color: hintColor)),
-                          Switch(
-                            value: _isDarkMode,
-                            onChanged: (value) => setState(() => _isDarkMode = value),
-                            activeColor: AppColors.aqua,
-                            inactiveThumbColor: Colors.grey[300],
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.aqua,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              // TODO: integrate password reset flow
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('Send reset link'),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Back to login'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
+    );
+  }
+}
+
+class _BlobPainter extends CustomPainter {
+  final double t;
+  final Color base1;
+  final Color base2;
+
+  _BlobPainter({required this.t, required this.base1, required this.base2});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p1 = Paint()..color = base1.withOpacity(0.9);
+    final p2 = Paint()..color = base2.withOpacity(0.6);
+    final p3 = Paint()..color = base2.withOpacity(0.3);
+
+    final w = size.width;
+    final h = size.height;
+
+    final cx = w * (0.3 + 0.05 * (1 - (t - 0.5).abs() * 2));
+    final cy = h * (0.25 + 0.02 * (1 - (t - 0.5).abs() * 2));
+
+    canvas.drawCircle(Offset(cx, cy), w * 0.45, p1);
+    canvas.drawCircle(Offset(w * (0.85 - 0.05 * t), h * 0.75), w * 0.55, p2);
+    canvas.drawCircle(
+      Offset(w * (0.2 + 0.1 * t), h * (0.9 - 0.05 * t)),
+      w * 0.35,
+      p3,
     );
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
+  bool shouldRepaint(covariant _BlobPainter oldDelegate) =>
+      oldDelegate.t != t ||
+      oldDelegate.base1 != base1 ||
+      oldDelegate.base2 != base2;
 }

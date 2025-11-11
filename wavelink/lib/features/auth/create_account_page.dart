@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
+import 'package:wavelink/core/utils/navigation_helper.dart';
 
+/// General account creation screen (NOT for Admin usage)
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
 
@@ -9,163 +11,287 @@ class CreateAccountPage extends StatefulWidget {
   State<CreateAccountPage> createState() => _CreateAccountPageState();
 }
 
-class _CreateAccountPageState extends State<CreateAccountPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _isDarkMode = false;
+class _CreateAccountPageState extends State<CreateAccountPage>
+    with SingleTickerProviderStateMixin {
+  // Role selection
+  String _selectedRole = 'Passenger'; // Default role
 
-  final Color darkBackgroundStart = const Color(0xFF0D1B2A); 
-  final Color darkBackgroundEnd = const Color(0xFF1B263B);   
-  final Color darkCardColor = const Color(0xFF1B2A47).withOpacity(0.7);
-  final Color darkTextColor = Colors.white;
-  final Color darkHintColor = Colors.white70;
+  // Common controllers
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _aadhar = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+
+  // Role-specific controllers
+  final _employeeId = TextEditingController();
+  final _username = TextEditingController();
+
+  late final AnimationController _bg;
+  bool _isDark = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bg = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _bg.dispose();
+    _name.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _aadhar.dispose();
+    _password.dispose();
+    _confirm.dispose();
+    _employeeId.dispose();
+    _username.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final backgroundStart = _isDarkMode ? darkBackgroundStart : AppColors.aqua;
-    final backgroundEnd = _isDarkMode ? darkBackgroundEnd : AppColors.navy;
-    final cardColor = _isDarkMode ? darkCardColor : Colors.white.withOpacity(0.2);
-    final textColor = _isDarkMode ? darkTextColor : AppColors.navy;
-    final hintColor = _isDarkMode ? darkHintColor : Colors.black54;
-
+    final size = MediaQuery.of(context).size;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: _isDarkMode ? Colors.blueGrey.shade900 : AppColors.navy,
-        title: const Text("Create Account"),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [backgroundStart, backgroundEnd],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.person_add, size: 60, color: textColor),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Create New Account',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      TextField(
-                        controller: _emailController,
-                        style: TextStyle(color: textColor),
-                        decoration: InputDecoration(
-                          labelText: 'Email / Phone',
-                          labelStyle: TextStyle(color: hintColor),
-                          prefixIcon: Icon(Icons.person, color: hintColor),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: hintColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.aqua),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: TextStyle(color: textColor),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: hintColor),
-                          prefixIcon: Icon(Icons.lock, color: hintColor),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: hintColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.aqua),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _confirmPasswordController,
-                        obscureText: true,
-                        style: TextStyle(color: textColor),
-                        decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          labelStyle: TextStyle(color: hintColor),
-                          prefixIcon: Icon(Icons.lock, color: hintColor),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: hintColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.aqua),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.navy,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Dark Mode', style: TextStyle(color: hintColor)),
-                          Switch(
-                            value: _isDarkMode,
-                            onChanged: (value) => setState(() => _isDarkMode = value),
-                            activeColor: AppColors.aqua,
-                            inactiveThumbColor: Colors.grey[300],
-                          ),
-                        ],
-                      ),
-                    ],
+      body: Stack(
+        children: [
+          AnimatedBuilder(
+            animation: _bg,
+            builder:
+                (_, __) => CustomPaint(
+                  size: Size(size.width, size.height),
+                  painter: _BlobPainter(
+                    t: _bg.value,
+                    base1: AppColors.navy,
+                    base2: AppColors.aqua,
                   ),
                 ),
+          ),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: const SizedBox.expand(),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: _buildCard(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color:
+            _isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.25)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Create account',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: _isDark ? Colors.white : Colors.black,
+                ), // Changed
+              ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.dark_mode,
+                    size: 18,
+                    color: _isDark ? Colors.white70 : Colors.black87,
+                  ), // Changed
+                  Switch(
+                    value: _isDark,
+                    onChanged: (v) => setState(() => _isDark = v),
+                    activeColor: AppColors.aqua,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // --- Role Selector ---
+          Row(
+            children: [
+              _roleButton('Passenger'),
+              const SizedBox(width: 12),
+              _roleButton('Employee'),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // --- Dynamic Form Fields ---
+          ..._buildFormFields(),
+
+          const SizedBox(height: 12),
+          _glassField(
+            controller: _password,
+            hint: 'Password',
+            icon: Icons.lock_outline,
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          _glassField(
+            controller: _confirm,
+            hint: 'Confirm password',
+            icon: Icons.lock_reset_outlined,
+            obscureText: true,
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.aqua,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                // TODO: implement real signup based on _selectedRole
+                Navigator.of(context).pop();
+              },
+              child: const Text('Create account'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Back to login',
+              style: TextStyle(
+                color: _isDark ? AppColors.aqua : AppColors.navy,
+              ), // Changed
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the list of form fields based on the selected role.
+  List<Widget> _buildFormFields() {
+    if (_selectedRole == 'Passenger') {
+      return [
+        _glassField(
+          controller: _name,
+          hint: 'Name',
+          icon: Icons.person_outline,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _email,
+          hint: 'Email',
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _username,
+          hint: 'Username',
+          icon: Icons.alternate_email,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _phone,
+          hint: 'Mobile Number',
+          icon: Icons.phone_outlined,
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _aadhar,
+          hint: 'Aadhar Number',
+          icon: Icons.badge_outlined,
+          keyboardType: TextInputType.number,
+        ),
+      ];
+    } else {
+      // Employee fields
+      return [
+        _glassField(
+          controller: _employeeId,
+          hint: 'Employee ID',
+          icon: Icons.badge_outlined,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _name,
+          hint: 'Employee Name',
+          icon: Icons.person_outline,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _email,
+          hint: 'Employee Email',
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _phone,
+          hint: 'Employee Phone Number',
+          icon: Icons.phone_outlined,
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 12),
+        _glassField(
+          controller: _aadhar,
+          hint: 'Employee Aadhar Number',
+          icon: Icons.badge_outlined,
+          keyboardType: TextInputType.number,
+        ),
+      ];
+    }
+  }
+
+  /// A button for role selection.
+  Widget _roleButton(String role) {
+    final isSelected = _selectedRole == role;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _selectedRole = role);
+          // You might want to clear controllers here if needed
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          child: Center(
+            child: Text(
+              role,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color:
+                    isSelected
+                        ? Colors.white
+                        : (_isDark ? Colors.white70 : Colors.black), // Changed
               ),
             ),
           ),
@@ -174,11 +300,80 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     );
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  Widget _glassField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            _isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.white.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.25)),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: TextStyle(
+          color: _isDark ? Colors.white : Colors.black,
+        ), // Added this line
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(
+            color: _isDark ? Colors.white54 : Colors.black54,
+          ), // Added this line
+          prefixIcon: Icon(
+            icon,
+            color: _isDark ? Colors.white70 : Colors.black87,
+          ), // Changed this line
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
   }
+}
+
+class _BlobPainter extends CustomPainter {
+  final double t;
+  final Color base1;
+  final Color base2;
+
+  _BlobPainter({required this.t, required this.base1, required this.base2});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p1 = Paint()..color = base1.withOpacity(0.9);
+    final p2 = Paint()..color = base2.withOpacity(0.6);
+    final p3 = Paint()..color = base2.withOpacity(0.3);
+
+    final w = size.width;
+    final h = size.height;
+
+    final cx = w * (0.3 + 0.05 * (1 - (t - 0.5).abs() * 2));
+    final cy = h * (0.25 + 0.02 * (1 - (t - 0.5).abs() * 2));
+
+    canvas.drawCircle(Offset(cx, cy), w * 0.45, p1);
+    canvas.drawCircle(Offset(w * (0.85 - 0.05 * t), h * 0.75), w * 0.55, p2);
+    canvas.drawCircle(
+      Offset(w * (0.2 + 0.1 * t), h * (0.9 - 0.05 * t)),
+      w * 0.35,
+      p3,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BlobPainter oldDelegate) =>
+      oldDelegate.t != t ||
+      oldDelegate.base1 != base1 ||
+      oldDelegate.base2 != base2;
 }

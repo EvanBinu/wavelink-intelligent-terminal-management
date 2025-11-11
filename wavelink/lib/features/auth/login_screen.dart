@@ -21,21 +21,18 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isDarkMode = false;
 
-  final Color darkBackgroundStart = const Color(0xFF0D1B2A); 
-  final Color darkBackgroundEnd = const Color(0xFF1B263B);   
+  final Color darkBackgroundStart = const Color(0xFF0D1B2A);
+  final Color darkBackgroundEnd = const Color(0xFF1B263B);
   final Color darkCardColor = const Color(0xFF1B2A47).withOpacity(0.7);
   final Color darkTextColor = Colors.white;
   final Color darkHintColor = Colors.white70;
 
   @override
   Widget build(BuildContext context) {
-    final backgroundStart =
-        _isDarkMode ? darkBackgroundStart : AppColors.aqua;
-    final backgroundEnd =
-        _isDarkMode ? darkBackgroundEnd : AppColors.navy;
-    final cardColor = _isDarkMode
-        ? darkCardColor
-        : Colors.white.withOpacity(0.2);
+    final backgroundStart = _isDarkMode ? darkBackgroundStart : AppColors.aqua;
+    final backgroundEnd = _isDarkMode ? darkBackgroundEnd : AppColors.navy;
+    final cardColor =
+        _isDarkMode ? darkCardColor : Colors.white.withOpacity(0.2);
     final textColor = _isDarkMode ? darkTextColor : AppColors.navy;
     final hintColor = _isDarkMode ? darkHintColor : Colors.black54;
 
@@ -81,7 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Animated Role Buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -92,27 +88,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Email Field
-                        TextField(
-                          controller: _emailController,
-                          style: TextStyle(color: textColor),
-                          decoration: InputDecoration(
-                            labelText: 'Email / Phone',
-                            labelStyle: TextStyle(color: hintColor),
-                            prefixIcon: Icon(Icons.person, color: hintColor),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: hintColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.aqua),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                        _buildPrimaryLoginField(textColor, hintColor),
 
-                        // Password Field
+                        if (selectedRole != 'Admin') const SizedBox(height: 16),
+
                         TextField(
                           controller: _passwordController,
                           obscureText: true,
@@ -133,7 +112,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
 
-                        // Forgot Password Link
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -141,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const ForgotPasswordPage()),
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
                               );
                             },
                             child: Text(
@@ -152,7 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Login Button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -176,39 +154,44 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Create Account Link
+                        // ✅ HIDE Create Account when ADMIN selected
+                        if (selectedRole != 'Admin')
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'New here? ',
+                                style: TextStyle(color: hintColor),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const CreateAccountPage(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Create Account',
+                                  style: TextStyle(
+                                    color: AppColors.aqua,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        const SizedBox(height: 16),
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'New here? ',
+                              'Dark Mode',
                               style: TextStyle(color: hintColor),
                             ),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const CreateAccountPage()),
-                                );
-                              },
-                              child: Text(
-                                'Create Account',
-                                style: TextStyle(
-                                    color: AppColors.aqua,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Dark Mode Switch
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('Dark Mode', style: TextStyle(color: hintColor)),
                             Switch(
                               value: _isDarkMode,
                               onChanged: (value) {
@@ -231,6 +214,43 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Widget _buildPrimaryLoginField(Color textColor, Color hintColor) {
+    String labelText;
+    IconData iconData;
+
+    switch (selectedRole) {
+      case 'Employee':
+        labelText = 'Employee Email ID';
+        iconData = Icons.email;
+        break;
+      case 'Passenger':
+        labelText = 'Username or Email';
+        iconData = Icons.person;
+        break;
+      case 'Admin':
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return TextField(
+      controller: _emailController,
+      style: TextStyle(color: textColor),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: TextStyle(color: hintColor),
+        prefixIcon: Icon(iconData, color: hintColor),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: hintColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.aqua),
+        ),
+      ),
+    );
+  }
+
   Widget _animatedRoleButton(String role) {
     final bool isSelected = selectedRole == role;
     final Color startColor =
@@ -241,37 +261,45 @@ class _LoginScreenState extends State<LoginScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() => selectedRole = role);
+          setState(() {
+            selectedRole = role;
+            _emailController.clear();
+            _passwordController.clear();
+          });
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? LinearGradient(colors: [startColor, endColor])
-                : null,
-            color: isSelected
-                ? null
-                : (_isDarkMode ? Colors.blueGrey : Colors.grey[300]),
+            gradient:
+                isSelected
+                    ? LinearGradient(colors: [startColor, endColor])
+                    : null,
+            color:
+                isSelected
+                    ? null
+                    : (_isDarkMode ? Colors.blueGrey : Colors.grey[300]),
             borderRadius: BorderRadius.circular(30),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: startColor.withOpacity(0.5),
-                      offset: const Offset(0, 4),
-                      blurRadius: 10,
-                    )
-                  ]
-                : [],
+            boxShadow:
+                isSelected
+                    ? [
+                      BoxShadow(
+                        color: startColor.withOpacity(0.5),
+                        offset: const Offset(0, 4),
+                        blurRadius: 10,
+                      ),
+                    ]
+                    : [],
           ),
           alignment: Alignment.center,
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 300),
             style: TextStyle(
-              color: isSelected
-                  ? Colors.white
-                  : (_isDarkMode ? Colors.white70 : Colors.black87),
+              color:
+                  isSelected
+                      ? Colors.white
+                      : (_isDarkMode ? Colors.white70 : Colors.black87),
               fontWeight: FontWeight.bold,
             ),
             child: Text(role),
