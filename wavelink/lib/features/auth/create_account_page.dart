@@ -1,7 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
-import 'package:wavelink/core/utils/navigation_helper.dart';
+import 'package:wavelink/features/auth/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// General account creation screen (NOT for Admin usage)
 class CreateAccountPage extends StatefulWidget {
@@ -13,6 +14,9 @@ class CreateAccountPage extends StatefulWidget {
 
 class _CreateAccountPageState extends State<CreateAccountPage>
     with SingleTickerProviderStateMixin {
+  // Auth service
+  final AuthService _authService = AuthService();
+  
   // Role selection
   String _selectedRole = 'Passenger'; // Default role
 
@@ -30,6 +34,7 @@ class _CreateAccountPageState extends State<CreateAccountPage>
 
   late final AnimationController _bg;
   bool _isDark = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -173,12 +178,19 @@ class _CreateAccountPageState extends State<CreateAccountPage>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                disabledBackgroundColor: Colors.grey,
               ),
-              onPressed: () {
-                // TODO: implement real signup based on _selectedRole
-                Navigator.of(context).pop();
-              },
-              child: const Text('Create account'),
+              onPressed: _isLoading ? null : _handleSignUp,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Create account'),
             ),
           ),
           const SizedBox(height: 8),
@@ -338,6 +350,113 @@ class _CreateAccountPageState extends State<CreateAccountPage>
             vertical: 14,
           ),
         ),
+      ),
+    );
+  }
+
+  /// Handles the signup process with validation
+  Future<void> _handleSignUp() async {
+    // Validation
+    if (_email.text.trim().isEmpty) {
+      _showError('Please enter your email');
+      return;
+    }
+
+    if (_password.text.isEmpty) {
+      _showError('Please enter a password');
+      return;
+    }
+
+    if (_password.text.length < 6) {
+      _showError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (_password.text != _confirm.text) {
+      _showError('Passwords do not match');
+      return;
+    }
+
+    if (_selectedRole == 'Passenger') {
+      if (_name.text.trim().isEmpty ||
+          _username.text.trim().isEmpty ||
+          _phone.text.trim().isEmpty ||
+          _aadhar.text.trim().isEmpty) {
+        _showError('Please fill in all required fields');
+        return;
+      }
+    } else if (_selectedRole == 'Employee') {
+      if (_employeeId.text.trim().isEmpty ||
+          _name.text.trim().isEmpty ||
+          _phone.text.trim().isEmpty ||
+          _aadhar.text.trim().isEmpty) {
+        _showError('Please fill in all required fields');
+        return;
+      }
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Sign up with Supabase
+      final response = await _authService.signUpWithEmail(
+        _email.text.trim(),
+        _password.text,
+      );
+
+      // If signup successful, optionally store additional user metadata
+      if (response.user != null) {
+        // You can store additional user data in Supabase here
+        // For example, using Supabase database tables or user metadata
+        try {
+          final supabase = Supabase.instance.client;
+          await supabase.from('user_profiles').insert({
+            'user_id': response.user!.id,
+            'role': _selectedRole.toLowerCase(),
+            'name': _name.text.trim(),
+            'phone': _phone.text.trim(),
+            'aadhar': _aadhar.text.trim(),
+            if (_selectedRole == 'Passenger') 'username': _username.text.trim(),
+            if (_selectedRole == 'Employee') 'employee_id': _employeeId.text.trim(),
+          });
+        } catch (e) {
+          // If table doesn't exist or insert fails, continue anyway
+          // The user account is still created
+          print('Could not save user profile: $e');
+        }
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully! Please check your email to verify.'),
+            backgroundColor: AppColors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Navigate back to login after a short delay
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showError('Signup failed: ${e.toString()}');
+      }
+    }
+  }
+
+  /// Shows an error message
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.red,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

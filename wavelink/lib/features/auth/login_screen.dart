@@ -7,7 +7,7 @@ import 'package:wavelink/features/employee/employee_dashboard.dart';
 import 'package:wavelink/features/passenger/passenger_dashboard.dart';
 import 'package:wavelink/features/auth/forgot_password_screen.dart';
 import 'package:wavelink/features/auth/create_account_page.dart';
-
+import 'package:wavelink/features/auth/auth_service.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,11 +16,31 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+
+  final AuthService _authService = AuthService();
+  
   String selectedRole = 'Admin';
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isDarkMode = false;
 
+  void login() async {
+    final email = _emailController.text;
+    final password = _passwordController.text;
+    try {
+      await _authService.signInWithEmail(email, password);
+      if (mounted) {
+        _handleLogin();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+      }
+    }
+  }
+
+  bool _isDarkMode = false;
   final Color darkBackgroundStart = const Color(0xFF0D1B2A);
   final Color darkBackgroundEnd = const Color(0xFF1B263B);
   final Color darkCardColor = const Color(0xFF1B2A47).withOpacity(0.7);
