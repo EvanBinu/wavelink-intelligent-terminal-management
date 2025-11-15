@@ -1,13 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/core/utils/navigation_helper.dart';
+import 'package:wavelink/core/utils/password_utils.dart';
 import 'package:wavelink/features/admin/admin_dashboard.dart';
 import 'package:wavelink/features/employee/employee_dashboard.dart';
 import 'package:wavelink/features/passenger/passenger_dashboard.dart';
 import 'package:wavelink/features/auth/forgot_password_screen.dart';
 import 'package:wavelink/features/auth/create_account_page.dart';
-import 'package:wavelink/features/auth/auth_service.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,45 +18,26 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-
-  final AuthService _authService = AuthService();
-  
-  String selectedRole = 'Admin';
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  void login() async {
-    final email = _emailController.text;
-    final password = _passwordController.text;
-    try {
-      await _authService.signInWithEmail(email, password);
-      if (mounted) {
-        _handleLogin();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
-      }
-    }
-  }
-
   bool _isDarkMode = false;
-  final Color darkBackgroundStart = const Color(0xFF0D1B2A);
-  final Color darkBackgroundEnd = const Color(0xFF1B263B);
-  final Color darkCardColor = const Color(0xFF1B2A47).withOpacity(0.7);
-  final Color darkTextColor = Colors.white;
-  final Color darkHintColor = Colors.white70;
+  bool _isLoading = false;
+
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   @override
   Widget build(BuildContext context) {
-    final backgroundStart = _isDarkMode ? darkBackgroundStart : AppColors.aqua;
-    final backgroundEnd = _isDarkMode ? darkBackgroundEnd : AppColors.navy;
-    final cardColor =
-        _isDarkMode ? darkCardColor : Colors.white.withOpacity(0.2);
-    final textColor = _isDarkMode ? darkTextColor : AppColors.navy;
-    final hintColor = _isDarkMode ? darkHintColor : Colors.black54;
+    final backgroundStart =
+        _isDarkMode ? AppColors.darkBackgroundStart : AppColors.aqua;
+    final backgroundEnd =
+        _isDarkMode ? AppColors.darkBackgroundEnd : AppColors.navy;
+    final cardColor = _isDarkMode
+        ? AppColors.darkCard.withOpacity(0.7)
+        : AppColors.whiteTransparent;
+    final textColor =
+        _isDarkMode ? AppColors.darkText : AppColors.textPrimary;
+    final hintColor =
+        _isDarkMode ? AppColors.darkHint : AppColors.black54;
 
     return Scaffold(
       body: Container(
@@ -79,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: cardColor,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.white.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
@@ -98,20 +81,27 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _animatedRoleButton('Admin'),
-                            _animatedRoleButton('Employee'),
-                            _animatedRoleButton('Passenger'),
-                          ],
+                        // Email field
+                        TextField(
+                          controller: _emailController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            labelStyle: TextStyle(color: hintColor),
+                            prefixIcon: Icon(Icons.email, color: hintColor),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: hintColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.aqua),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
 
-                        _buildPrimaryLoginField(textColor, hintColor),
-
-                        if (selectedRole != 'Admin') const SizedBox(height: 16),
-
+                        // Password field
                         TextField(
                           controller: _passwordController,
                           obscureText: true,
@@ -151,74 +141,76 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
 
+                        // Login Button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _handleLogin,
+                            onPressed:
+                                _isLoading ? null : _loginWithWerkzeugHash,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.navy,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(
+                                    color: AppColors.white,
+                                  )
+                                : const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 16),
 
-                        // ✅ HIDE Create Account when ADMIN selected
-                        if (selectedRole != 'Admin')
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'New here? ',
-                                style: TextStyle(color: hintColor),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const CreateAccountPage(),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'Create Account',
-                                  style: TextStyle(
-                                    color: AppColors.aqua,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                        const SizedBox(height: 16),
-
+                        // Create Account Option
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Dark Mode',
+                              'New here? ',
                               style: TextStyle(color: hintColor),
                             ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CreateAccountPage(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  color: AppColors.aqua,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Dark Mode Toggle
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('Dark Mode', style: TextStyle(color: hintColor)),
                             Switch(
                               value: _isDarkMode,
                               onChanged: (value) {
                                 setState(() => _isDarkMode = value);
                               },
                               activeColor: AppColors.aqua,
-                              inactiveThumbColor: Colors.grey[300],
+                              inactiveThumbColor: AppColors.grey300,
                             ),
                           ],
                         ),
@@ -234,117 +226,76 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildPrimaryLoginField(Color textColor, Color hintColor) {
-    String labelText;
-    IconData iconData;
+  /// 🔹 Supabase Table Login using Werkzeug Hash Verification
+  Future<void> _loginWithWerkzeugHash() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    switch (selectedRole) {
-      case 'Employee':
-        labelText = 'Employee Email ID';
-        iconData = Icons.email;
-        break;
-      case 'Passenger':
-        labelText = 'Username or Email';
-        iconData = Icons.person;
-        break;
-      case 'Admin':
-      default:
-        return const SizedBox.shrink();
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password')),
+      );
+      return;
     }
 
-    return TextField(
-      controller: _emailController,
-      style: TextStyle(color: textColor),
-      decoration: InputDecoration(
-        labelText: labelText,
-        labelStyle: TextStyle(color: hintColor),
-        prefixIcon: Icon(iconData, color: hintColor),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: hintColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.aqua),
-        ),
-      ),
-    );
-  }
+    setState(() => _isLoading = true);
 
-  Widget _animatedRoleButton(String role) {
-    final bool isSelected = selectedRole == role;
-    final Color startColor =
-        _isDarkMode ? Colors.blueAccent.shade700 : AppColors.aqua;
-    final Color endColor =
-        _isDarkMode ? Colors.lightBlue.shade400 : AppColors.navy;
+    try {
+      print('🔍 Fetching user from Supabase for email: $email');
+      final user = await _supabase
+          .from('users')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedRole = role;
-            _emailController.clear();
-            _passwordController.clear();
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            gradient:
-                isSelected
-                    ? LinearGradient(colors: [startColor, endColor])
-                    : null,
-            color:
-                isSelected
-                    ? null
-                    : (_isDarkMode ? Colors.blueGrey : Colors.grey[300]),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow:
-                isSelected
-                    ? [
-                      BoxShadow(
-                        color: startColor.withOpacity(0.5),
-                        offset: const Offset(0, 4),
-                        blurRadius: 10,
-                      ),
-                    ]
-                    : [],
-          ),
-          alignment: Alignment.center,
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 300),
-            style: TextStyle(
-              color:
-                  isSelected
-                      ? Colors.white
-                      : (_isDarkMode ? Colors.white70 : Colors.black87),
-              fontWeight: FontWeight.bold,
-            ),
-            child: Text(role),
-          ),
-        ),
-      ),
-    );
-  }
+      print('📦 Fetched User Data: $user');
 
-  void _handleLogin() {
-    Widget dashboard;
-    switch (selectedRole) {
-      case 'Admin':
-        dashboard = const AdminDashboardScreen();
-        break;
-      case 'Employee':
-        dashboard = const EmployeeDashboardScreen();
-        break;
-      case 'Passenger':
-        dashboard = const PassengerDashboardScreen();
-        break;
-      default:
-        dashboard = const AdminDashboardScreen();
+      if (user == null) {
+        throw Exception('No user found with this email');
+      }
+
+      final hashedPassword = user['password']?.toString();
+      if (hashedPassword == null) {
+        throw Exception('User password not found');
+      }
+
+      // ✅ Verify password using Werkzeug-compatible check
+      final passwordMatch = await checkPasswordHash(password, hashedPassword);
+
+      if (!passwordMatch) {
+        throw Exception('Invalid password');
+      }
+
+      final String role = user['role']?.toString().toLowerCase() ?? 'passenger';
+      print('👤 Role found: $role');
+
+      Widget dashboard;
+      switch (role) {
+        case 'admin':
+          dashboard = const AdminDashboardScreen();
+          break;
+        case 'employee':
+          dashboard = const EmployeeDashboardScreen();
+          break;
+        case 'passenger':
+        default:
+          dashboard = const PassengerDashboardScreen();
+      }
+
+      if (mounted) {
+        print('➡️ Redirecting to $role dashboard...');
+        NavigationHelper.replaceWith(context, dashboard);
+      }
+    } catch (e) {
+      print('❌ Login Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-    NavigationHelper.replaceWith(context, dashboard);
   }
 
   @override

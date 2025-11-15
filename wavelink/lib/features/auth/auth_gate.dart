@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wavelink/features/auth/login_screen.dart';
 import 'package:wavelink/features/admin/admin_dashboard.dart';
-
+import 'package:wavelink/features/passenger/passenger_dashboard.dart';
 
 class AuthGate extends StatelessWidget {
     const AuthGate({super.key});
@@ -17,7 +17,7 @@ class AuthGate extends StatelessWidget {
                 }
                 final session = snapshot.data?.session;
                 if (session != null) {
-                    return const AdminDashboardScreen();
+                    return const PassengerDashboardScreen();
                 }       
                 else{
                     return const LoginScreen();

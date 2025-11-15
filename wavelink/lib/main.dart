@@ -7,8 +7,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://ywvnhsgkubitvvjvngfg.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3dm5oc2drdWJpdHZ2anZuZ2ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4ODIwNzQsImV4cCI6MjA3ODQ1ODA3NH0.hatvbYqAcWBlZyhqYM6ZLbnWfGK-LsTGvk-ohYJ2Rhw',
+    url: 'https://zaxkcgsttfokrgrftlct.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpheGtjZ3N0dGZva3JncmZ0bGN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjcwMTM5MiwiZXhwIjoyMDc4Mjc3MzkyfQ.UpkwTT3TlPlg_rD5JsGEoq_vhX5D3EPx5OEsmnIZQ9k',
   );
   runApp(const WaveLinkApp());
 }

@@ -430,7 +430,7 @@ class _CreateAccountPageState extends State<CreateAccountPage>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Account created successfully! Please check your email to verify.'),
+            content: Text('Account created successfully!'),
             backgroundColor: AppColors.green,
             duration: Duration(seconds: 3),
           ),

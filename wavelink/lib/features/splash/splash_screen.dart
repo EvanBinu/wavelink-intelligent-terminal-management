@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
-import 'package:wavelink/features/auth/login_screen.dart';
 import 'package:wavelink/core/utils/navigation_helper.dart';
 import 'package:wavelink/core/constants/app_strings.dart';
+import 'package:wavelink/features/home/home_screen.dart'; // ✅ import HomeScreen
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -27,8 +27,9 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
     _controller.forward();
 
+    // ✅ Navigate to HomeScreen after 3 seconds
     Timer(const Duration(seconds: 3), () {
-      NavigationHelper.replaceWith(context, const LoginScreen());
+      NavigationHelper.replaceWith(context, const HomeScreen());
     });
   }
 
@@ -83,5 +84,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-
-
