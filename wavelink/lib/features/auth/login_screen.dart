@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/core/utils/navigation_helper.dart';
 import 'package:wavelink/core/utils/password_utils.dart';
@@ -24,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isDarkMode = false;
   bool _isLoading = false;
+  bool _obscurePassword = true; // 👁 ADD THIS
 
   final SupabaseClient _supabase = Supabase.instance.client;
 
@@ -34,15 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final backgroundEnd =
         _isDarkMode ? AppColors.darkBackgroundEnd : AppColors.navy;
 
-    final cardColor = _isDarkMode
-        ? AppColors.darkCard.withOpacity(0.7)
-        : AppColors.whiteTransparent;
+    final cardColor =
+        _isDarkMode ? AppColors.darkCard.withOpacity(0.7) : AppColors.whiteTransparent;
 
-    final textColor =
-        _isDarkMode ? AppColors.darkText : AppColors.textPrimary;
-
-    final hintColor =
-        _isDarkMode ? AppColors.darkHint : AppColors.black54;
+    final textColor = _isDarkMode ? AppColors.darkText : AppColors.textPrimary;
+    final hintColor = _isDarkMode ? AppColors.darkHint : AppColors.black54;
 
     return Scaffold(
       body: Container(
@@ -86,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Email field
+                        // EMAIL FIELD
                         TextField(
                           controller: _emailController,
                           style: TextStyle(color: textColor),
@@ -106,15 +104,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Password field
+                        // PASSWORD FIELD WITH TOGGLE 👁
                         TextField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Password',
                             labelStyle: TextStyle(color: hintColor),
                             prefixIcon: Icon(Icons.lock, color: hintColor),
+
+                            // 👁 Toggle Icon
+                            suffixIcon: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                              child: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: hintColor,
+                              ),
+                            ),
+
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: hintColor),
@@ -125,6 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 8),
 
                         Align(
@@ -141,9 +156,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text('Forgot Password?', style: TextStyle(color: hintColor)),
                           ),
                         ),
+
                         const SizedBox(height: 16),
 
-                        // Login button
+                        // LOGIN BUTTON
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -170,17 +186,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 16),
 
-                        // Create account link
+                        // CREATE ACCOUNT LINK
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text("New here?", style: TextStyle(color: hintColor)),
                             const SizedBox(width: 4),
                             GestureDetector(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const CreateAccountPage()),
-                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CreateAccountPage(),
+                                  ),
+                                );
+                              },
                               child: const Text(
                                 "Create Account",
                                 style: TextStyle(
@@ -194,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 16),
 
-                        // Dark mode switch
+                        // DARK MODE SWITCH
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -220,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// LOGIN FUNCTION (PBKDF2 ONLY)
+  /// LOGIN FUNCTION — supports PBKDF2 & SCRYPT
   Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -241,28 +261,23 @@ class _LoginScreenState extends State<LoginScreen> {
           .eq('email', email)
           .maybeSingle();
 
-      print("📥 Email entered: $email");
-      print("📦 DB user: $user");
+      print("📥 Email: $email");
+      print("📦 DB User: $user");
 
       if (user == null) {
         throw Exception("Invalid email or password");
       }
 
-      final storedHash = user['password'];
-      print("🔐 Stored hash: $storedHash");
+      final storedHash = user["password"];
+      print("🔐 Stored hash → $storedHash");
 
       final bool ok = await checkPasswordHash(password, storedHash);
 
-      print("🔍 Password match? → $ok");
+      if (!ok) throw Exception("Invalid email or password");
 
-      if (!ok) {
-        throw Exception("Invalid email or password");
-      }
-
-      // Role detection
       final role = (user['role'] ?? 'passenger').toLowerCase();
-      Widget screen;
 
+      Widget screen;
       switch (role) {
         case 'admin':
           screen = const AdminDashboardScreen();
