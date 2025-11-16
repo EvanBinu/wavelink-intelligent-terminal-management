@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/core/utils/navigation_helper.dart';
 import 'package:wavelink/core/utils/password_utils.dart';
+
 import 'package:wavelink/features/admin/admin_dashboard.dart';
 import 'package:wavelink/features/employee/employee_dashboard.dart';
 import 'package:wavelink/features/passenger/passenger_dashboard.dart';
@@ -20,6 +21,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isDarkMode = false;
   bool _isLoading = false;
 
@@ -31,11 +33,14 @@ class _LoginScreenState extends State<LoginScreen> {
         _isDarkMode ? AppColors.darkBackgroundStart : AppColors.aqua;
     final backgroundEnd =
         _isDarkMode ? AppColors.darkBackgroundEnd : AppColors.navy;
+
     final cardColor = _isDarkMode
         ? AppColors.darkCard.withOpacity(0.7)
         : AppColors.whiteTransparent;
+
     final textColor =
         _isDarkMode ? AppColors.darkText : AppColors.textPrimary;
+
     final hintColor =
         _isDarkMode ? AppColors.darkHint : AppColors.black54;
 
@@ -43,9 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
+            colors: [backgroundStart, backgroundEnd],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [backgroundStart, backgroundEnd],
           ),
         ),
         child: SafeArea(
@@ -133,62 +138,51 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: Text(
-                              'Forgot Password?',
-                              style: TextStyle(color: hintColor),
-                            ),
+                            child: Text('Forgot Password?', style: TextStyle(color: hintColor)),
                           ),
                         ),
                         const SizedBox(height: 16),
 
-                        // Login Button
+                        // Login button
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
                           child: ElevatedButton(
-                            onPressed:
-                                _isLoading ? null : _loginWithWerkzeugHash,
+                            onPressed: _isLoading ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.navy,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: AppColors.white,
-                                  )
+                                ? const CircularProgressIndicator(color: Colors.white)
                                 : const Text(
-                                    'Login',
+                                    "Login",
                                     style: TextStyle(
                                       fontSize: 16,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.white,
                                     ),
                                   ),
                           ),
                         ),
+
                         const SizedBox(height: 16),
 
-                        // Create Account Option
+                        // Create account link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'New here? ',
-                              style: TextStyle(color: hintColor),
-                            ),
+                            Text("New here?", style: TextStyle(color: hintColor)),
+                            const SizedBox(width: 4),
                             GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const CreateAccountPage(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Create Account',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const CreateAccountPage()),
+                              ),
+                              child: const Text(
+                                "Create Account",
                                 style: TextStyle(
                                   color: AppColors.aqua,
                                   fontWeight: FontWeight.bold,
@@ -197,20 +191,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                         ),
+
                         const SizedBox(height: 16),
 
-                        // Dark Mode Toggle
+                        // Dark mode switch
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Dark Mode', style: TextStyle(color: hintColor)),
+                            Text("Dark Mode", style: TextStyle(color: hintColor)),
                             Switch(
                               value: _isDarkMode,
                               onChanged: (value) {
                                 setState(() => _isDarkMode = value);
                               },
                               activeColor: AppColors.aqua,
-                              inactiveThumbColor: AppColors.grey300,
                             ),
                           ],
                         ),
@@ -226,14 +220,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// 🔹 Supabase Table Login using Werkzeug Hash Verification
-  Future<void> _loginWithWerkzeugHash() async {
+  /// LOGIN FUNCTION (PBKDF2 ONLY)
+  Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password')),
+        const SnackBar(content: Text("Enter email & password")),
       );
       return;
     }
@@ -241,58 +235,50 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      print('🔍 Fetching user from Supabase for email: $email');
       final user = await _supabase
           .from('users')
           .select()
           .eq('email', email)
           .maybeSingle();
 
-      print('📦 Fetched User Data: $user');
+      print("📥 Email entered: $email");
+      print("📦 DB user: $user");
 
       if (user == null) {
-        throw Exception('No user found with this email');
+        throw Exception("Invalid email or password");
       }
 
-      final hashedPassword = user['password']?.toString();
-      if (hashedPassword == null) {
-        throw Exception('User password not found');
+      final storedHash = user['password'];
+      print("🔐 Stored hash: $storedHash");
+
+      final bool ok = await checkPasswordHash(password, storedHash);
+
+      print("🔍 Password match? → $ok");
+
+      if (!ok) {
+        throw Exception("Invalid email or password");
       }
 
-      // ✅ Verify password using Werkzeug-compatible check
-      final passwordMatch = await checkPasswordHash(password, hashedPassword);
+      // Role detection
+      final role = (user['role'] ?? 'passenger').toLowerCase();
+      Widget screen;
 
-      if (!passwordMatch) {
-        throw Exception('Invalid password');
-      }
-
-      final String role = user['role']?.toString().toLowerCase() ?? 'passenger';
-      print('👤 Role found: $role');
-
-      Widget dashboard;
       switch (role) {
         case 'admin':
-          dashboard = const AdminDashboardScreen();
+          screen = const AdminDashboardScreen();
           break;
         case 'employee':
-          dashboard = const EmployeeDashboardScreen();
+          screen = const EmployeeDashboardScreen();
           break;
-        case 'passenger':
         default:
-          dashboard = const PassengerDashboardScreen();
+          screen = const PassengerDashboardScreen();
       }
 
-      if (mounted) {
-        print('➡️ Redirecting to $role dashboard...');
-        NavigationHelper.replaceWith(context, dashboard);
-      }
+      if (mounted) NavigationHelper.replaceWith(context, screen);
     } catch (e) {
-      print('❌ Login Error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login failed: $e")),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
