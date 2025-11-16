@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/features/auth/login_screen.dart';
 import 'package:wavelink/core/utils/navigation_helper.dart';
+import 'package:wavelink/features/auth/create_account_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -69,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 bgColor: AppColors.textPrimary,
                 textColor: AppColors.white,
                 onTap: () {
-                  // TODO: Add navigation to onboarding or signup page
+                  NavigationHelper.push(context, const CreateAccountPage());
                 },
               ),
               const Spacer(),

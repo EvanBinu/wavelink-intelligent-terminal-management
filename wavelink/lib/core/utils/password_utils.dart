@@ -2,68 +2,90 @@ import 'dart:convert';
 import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart';
 
-/// Master verification for both PBKDF2 and Scrypt (detected)
+/// ===========================================================
+///  PASSWORD VERIFY — Handles PBKDF2, rejects Scrypt safely
+/// ===========================================================
 Future<bool> checkPasswordHash(String password, String storedHash) async {
   try {
     if (storedHash.startsWith("pbkdf2:sha256")) {
-      return await _verifyPbkdf2Hash(password, storedHash);
+      return await _verifyPbkdf2(password, storedHash);
     }
 
-    if (storedHash.startsWith("scrypt:")) {
-      print("❌ Scrypt detected - Flutter cannot verify this hash.");
-      print("❗ User must reset password (convert to PBKDF2).");
-      return false;
-    }
-
-    print("❌ Unknown hash format: $storedHash");
+    print("❌ Scrypt detected. Convert this user to PBKDF2.");
     return false;
   } catch (e) {
-    print("❌ Error verifying password: $e");
+    print("❌ Password verification error: $e");
     return false;
   }
 }
 
-/// PBKDF2 verification
-Future<bool> _verifyPbkdf2Hash(String password, String fullHash) async {
-  final parts = fullHash.split('\$');
-  if (parts.length != 3) {
-    print("❌ Invalid PBKDF2 format");
-    return false;
-  }
+/// PBKDF2 HMAC-SHA256 verification (Werkzeug-compatible)
+Future<bool> _verifyPbkdf2(String password, String fullHash) async {
+  final parts = fullHash.split("\$");
+  if (parts.length != 3) return false;
 
-  final method = parts[0];       // pbkdf2:sha256:260000
+  final method = parts[0]; // pbkdf2:sha256:260000
   final salt = parts[1];
   final expectedHash = parts[2];
 
-  final methodParts = method.split(':');
-  final iterations = int.parse(methodParts[2]);
+  final methodParts = method.split(":");
+  final iterations = int.tryParse(methodParts[2]) ?? 260000;
 
-  // Werkzeug: hex hash length → bits
-  final hashBytes = expectedHash.length ~/ 2;
-  final bitLength = hashBytes * 8;
-
-  final pbkdf2 = Pbkdf2(
+  final algo = Pbkdf2(
     macAlgorithm: Hmac.sha256(),
     iterations: iterations,
-    bits: bitLength,
+    bits: expectedHash.length * 4, // hex → bits
   );
 
-  final secretKey = SecretKey(utf8.encode(password));
-  final nonce = utf8.encode(salt);
-
-  final newKey = await pbkdf2.deriveKey(
-    secretKey: secretKey,
-    nonce: nonce,
+  final newKey = await algo.deriveKey(
+    secretKey: SecretKey(utf8.encode(password)),
+    nonce: utf8.encode(salt),
   );
 
-  final newHashBytes = await newKey.extractBytes();
-  final newHashHex = hex.encode(newHashBytes);
+  final newHash = hex.encode(await newKey.extractBytes());
 
-  return _constantTimeCompare(newHashHex, expectedHash);
+  return constantTimeCompare(newHash, expectedHash);
 }
 
-/// Constant-time compare
-bool _constantTimeCompare(String a, String b) {
+/// ===========================================================
+///  PASSWORD HASH — Called when creating a new account
+///  Returns:  pbkdf2:sha256:260000$salt$hexhash
+/// ===========================================================
+Future<String> hashPassword(String password) async {
+  const iterations = 260000;
+  final salt = _generateSalt(16);
+
+  final algo = Pbkdf2(
+    macAlgorithm: Hmac.sha256(),
+    iterations: iterations,
+    bits: 256,
+  );
+
+  final key = await algo.deriveKey(
+    secretKey: SecretKey(utf8.encode(password)),
+    nonce: utf8.encode(salt),
+  );
+
+  final hash = hex.encode(await key.extractBytes());
+
+  return "pbkdf2:sha256:$iterations\$$salt\$$hash";
+}
+
+/// Create ASCII salt
+String _generateSalt(int length) {
+  const chars =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  final now = DateTime.now().microsecondsSinceEpoch;
+
+  final buffer = StringBuffer();
+  for (int i = 0; i < length; i++) {
+    buffer.write(chars[(now + i * 37) % chars.length]);
+  }
+  return buffer.toString();
+}
+
+/// Constant-time string comparison
+bool constantTimeCompare(String a, String b) {
   if (a.length != b.length) return false;
   int diff = 0;
   for (int i = 0; i < a.length; i++) {

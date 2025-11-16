@@ -1,10 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
-import 'package:wavelink/features/auth/auth_service.dart';
+import 'package:wavelink/core/utils/password_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// General account creation screen (NOT for Admin usage)
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
 
@@ -14,23 +13,14 @@ class CreateAccountPage extends StatefulWidget {
 
 class _CreateAccountPageState extends State<CreateAccountPage>
     with SingleTickerProviderStateMixin {
-  // Auth service
-  final AuthService _authService = AuthService();
-  
-  // Role selection
-  String _selectedRole = 'Passenger'; // Default role
+  final SupabaseClient supabase = Supabase.instance.client;
 
-  // Common controllers
+  // Controllers
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _phone = TextEditingController();
-  final _aadhar = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
-
-  // Role-specific controllers
-  final _employeeId = TextEditingController();
-  final _username = TextEditingController();
 
   late final AnimationController _bg;
   bool _isDark = false;
@@ -51,31 +41,28 @@ class _CreateAccountPageState extends State<CreateAccountPage>
     _name.dispose();
     _email.dispose();
     _phone.dispose();
-    _aadhar.dispose();
     _password.dispose();
     _confirm.dispose();
-    _employeeId.dispose();
-    _username.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
     return Scaffold(
       body: Stack(
         children: [
           AnimatedBuilder(
             animation: _bg,
-            builder:
-                (_, __) => CustomPaint(
-                  size: Size(size.width, size.height),
-                  painter: _BlobPainter(
-                    t: _bg.value,
-                    base1: AppColors.navy,
-                    base2: AppColors.aqua,
-                  ),
-                ),
+            builder: (_, __) => CustomPaint(
+              size: Size(size.width, size.height),
+              painter: _BlobPainter(
+                t: _bg.value,
+                base1: AppColors.navy,
+                base2: AppColors.aqua,
+              ),
+            ),
           ),
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
@@ -101,10 +88,9 @@ class _CreateAccountPageState extends State<CreateAccountPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color:
-            _isDark
-                ? Colors.white.withOpacity(0.06)
-                : Colors.white.withOpacity(0.55),
+        color: _isDark
+            ? Colors.white.withOpacity(0.06)
+            : Colors.white.withOpacity(0.55),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.25)),
       ),
@@ -115,12 +101,12 @@ class _CreateAccountPageState extends State<CreateAccountPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Create account',
+                'Create Account',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: _isDark ? Colors.white : Colors.black,
-                ), // Changed
+                ),
               ),
               Row(
                 children: [
@@ -128,7 +114,7 @@ class _CreateAccountPageState extends State<CreateAccountPage>
                     Icons.dark_mode,
                     size: 18,
                     color: _isDark ? Colors.white70 : Colors.black87,
-                  ), // Changed
+                  ),
                   Switch(
                     value: _isDark,
                     onChanged: (v) => setState(() => _isDark = v),
@@ -138,36 +124,44 @@ class _CreateAccountPageState extends State<CreateAccountPage>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // --- Role Selector ---
-          Row(
-            children: [
-              _roleButton('Passenger'),
-              const SizedBox(width: 12),
-              _roleButton('Employee'),
-            ],
+          /// Passenger fields
+          _glassField(
+            controller: _name,
+            hint: "Full Name",
+            icon: Icons.person_outline,
           ),
-          const SizedBox(height: 16),
-
-          // --- Dynamic Form Fields ---
-          ..._buildFormFields(),
-
+          const SizedBox(height: 12),
+          _glassField(
+            controller: _email,
+            hint: "Email",
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 12),
+          _glassField(
+            controller: _phone,
+            hint: "Phone Number",
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+          ),
           const SizedBox(height: 12),
           _glassField(
             controller: _password,
-            hint: 'Password',
+            hint: "Password",
             icon: Icons.lock_outline,
             obscureText: true,
           ),
           const SizedBox(height: 12),
           _glassField(
             controller: _confirm,
-            hint: 'Confirm password',
+            hint: "Confirm Password",
             icon: Icons.lock_reset_outlined,
             obscureText: true,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -178,29 +172,29 @@ class _CreateAccountPageState extends State<CreateAccountPage>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                disabledBackgroundColor: Colors.grey,
               ),
-              onPressed: _isLoading ? null : _handleSignUp,
+              onPressed: _isLoading ? null : _createPassengerAccount,
               child: _isLoading
                   ? const SizedBox(
-                      height: 20,
-                      width: 20,
+                      height: 22,
+                      width: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
                     )
-                  : const Text('Create account'),
+                  : const Text("Create Account"),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(context),
             child: Text(
-              'Back to login',
+              "Back to Login",
               style: TextStyle(
                 color: _isDark ? AppColors.aqua : AppColors.navy,
-              ), // Changed
+              ),
             ),
           ),
         ],
@@ -208,109 +202,53 @@ class _CreateAccountPageState extends State<CreateAccountPage>
     );
   }
 
-  /// Builds the list of form fields based on the selected role.
-  List<Widget> _buildFormFields() {
-    if (_selectedRole == 'Passenger') {
-      return [
-        _glassField(
-          controller: _name,
-          hint: 'Name',
-          icon: Icons.person_outline,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _email,
-          hint: 'Email',
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _username,
-          hint: 'Username',
-          icon: Icons.alternate_email,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _phone,
-          hint: 'Mobile Number',
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _aadhar,
-          hint: 'Aadhar Number',
-          icon: Icons.badge_outlined,
-          keyboardType: TextInputType.number,
-        ),
-      ];
-    } else {
-      // Employee fields
-      return [
-        _glassField(
-          controller: _employeeId,
-          hint: 'Employee ID',
-          icon: Icons.badge_outlined,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _name,
-          hint: 'Employee Name',
-          icon: Icons.person_outline,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _email,
-          hint: 'Employee Email',
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _phone,
-          hint: 'Employee Phone Number',
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 12),
-        _glassField(
-          controller: _aadhar,
-          hint: 'Employee Aadhar Number',
-          icon: Icons.badge_outlined,
-          keyboardType: TextInputType.number,
-        ),
-      ];
-    }
+  /// Create passenger user in `users` table
+Future<void> _createPassengerAccount() async {
+  if (_email.text.trim().isEmpty ||
+      _name.text.trim().isEmpty ||
+      _phone.text.trim().isEmpty) {
+    _showError("Fill all fields");
+    return;
   }
 
-  /// A button for role selection.
-  Widget _roleButton(String role) {
-    final isSelected = _selectedRole == role;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() => _selectedRole = role);
-          // You might want to clear controllers here if needed
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          child: Center(
-            child: Text(
-              role,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color:
-                    isSelected
-                        ? Colors.white
-                        : (_isDark ? Colors.white70 : Colors.black), // Changed
-              ),
-            ),
-          ),
-        ),
+  if (_password.text != _confirm.text) {
+    _showError("Passwords do not match");
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    // Hash password (ASYNC!)
+    final hashedPassword = await hashPassword(_password.text);
+
+    // Insert into Supabase
+    await supabase.from("users").insert({
+      "email": _email.text.trim(),
+      "password": hashedPassword,
+      "full_name": _name.text.trim(),
+      "phone": _phone.text.trim(),
+      "role": "passenger",
+      "is_active": true,
+    });
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Account created!"),
+        backgroundColor: Colors.green,
       ),
     );
+
+    Navigator.pop(context);
+  } catch (e) {
+    _showError("Signup failed: $e");
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
+
 
   Widget _glassField({
     required TextEditingController controller,
@@ -321,10 +259,9 @@ class _CreateAccountPageState extends State<CreateAccountPage>
   }) {
     return Container(
       decoration: BoxDecoration(
-        color:
-            _isDark
-                ? Colors.white.withOpacity(0.06)
-                : Colors.white.withOpacity(0.7),
+        color: _isDark
+            ? Colors.white.withOpacity(0.06)
+            : Colors.white.withOpacity(0.7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.25)),
       ),
@@ -332,18 +269,16 @@ class _CreateAccountPageState extends State<CreateAccountPage>
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        style: TextStyle(
-          color: _isDark ? Colors.white : Colors.black,
-        ), // Added this line
+        style: TextStyle(color: _isDark ? Colors.white : Colors.black),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
             color: _isDark ? Colors.white54 : Colors.black54,
-          ), // Added this line
+          ),
           prefixIcon: Icon(
             icon,
             color: _isDark ? Colors.white70 : Colors.black87,
-          ), // Changed this line
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
@@ -354,109 +289,11 @@ class _CreateAccountPageState extends State<CreateAccountPage>
     );
   }
 
-  /// Handles the signup process with validation
-  Future<void> _handleSignUp() async {
-    // Validation
-    if (_email.text.trim().isEmpty) {
-      _showError('Please enter your email');
-      return;
-    }
-
-    if (_password.text.isEmpty) {
-      _showError('Please enter a password');
-      return;
-    }
-
-    if (_password.text.length < 6) {
-      _showError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (_password.text != _confirm.text) {
-      _showError('Passwords do not match');
-      return;
-    }
-
-    if (_selectedRole == 'Passenger') {
-      if (_name.text.trim().isEmpty ||
-          _username.text.trim().isEmpty ||
-          _phone.text.trim().isEmpty ||
-          _aadhar.text.trim().isEmpty) {
-        _showError('Please fill in all required fields');
-        return;
-      }
-    } else if (_selectedRole == 'Employee') {
-      if (_employeeId.text.trim().isEmpty ||
-          _name.text.trim().isEmpty ||
-          _phone.text.trim().isEmpty ||
-          _aadhar.text.trim().isEmpty) {
-        _showError('Please fill in all required fields');
-        return;
-      }
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      // Sign up with Supabase
-      final response = await _authService.signUpWithEmail(
-        _email.text.trim(),
-        _password.text,
-      );
-
-      // If signup successful, optionally store additional user metadata
-      if (response.user != null) {
-        // You can store additional user data in Supabase here
-        // For example, using Supabase database tables or user metadata
-        try {
-          final supabase = Supabase.instance.client;
-          await supabase.from('user_profiles').insert({
-            'user_id': response.user!.id,
-            'role': _selectedRole.toLowerCase(),
-            'name': _name.text.trim(),
-            'phone': _phone.text.trim(),
-            'aadhar': _aadhar.text.trim(),
-            if (_selectedRole == 'Passenger') 'username': _username.text.trim(),
-            if (_selectedRole == 'Employee') 'employee_id': _employeeId.text.trim(),
-          });
-        } catch (e) {
-          // If table doesn't exist or insert fails, continue anyway
-          // The user account is still created
-          print('Could not save user profile: $e');
-        }
-      }
-
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: AppColors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        // Navigate back to login after a short delay
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showError('Signup failed: ${e.toString()}');
-      }
-    }
-  }
-
-  /// Shows an error message
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: AppColors.red,
-        duration: const Duration(seconds: 3),
       ),
     );
   }
