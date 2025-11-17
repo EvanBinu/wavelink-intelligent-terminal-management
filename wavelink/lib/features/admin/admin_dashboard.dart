@@ -14,6 +14,9 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   OverlayEntry? _notificationOverlay;
 
+  // ---------------------------------------------------------------------------
+  // NOTIFICATION PANEL
+  // ---------------------------------------------------------------------------
   void _toggleNotifications(BuildContext context) {
     if (_notificationOverlay != null) {
       _notificationOverlay!.remove();
@@ -103,6 +106,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // MAIN UI
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,20 +151,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.people, color: Colors.white),
-            tooltip: 'Employee Management',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const EmployeeManagementScreen(),
-                ),
-              );
-            },
-          ),
         ],
       ),
+
+      // -----------------------------------------------------------------------
+      // BODY
+      // -----------------------------------------------------------------------
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -172,7 +170,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: Colors.white,
               ),
             ),
+
             const SizedBox(height: 24),
+
+            // Row 1 KPIs
             Row(
               children: [
                 Expanded(
@@ -194,7 +195,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
+
+            // Row 2 KPIs
             Row(
               children: [
                 Expanded(
@@ -216,14 +220,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 32),
+
+            // Feature cards
             _buildFeatureCard(
               context,
               '👨‍💼 Employee Management',
               'Add, view, and update employees',
               Icons.people,
               AppColors.aqua,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EmployeeManagementScreen(),
+                  ),
+                );
+              },
             ),
+
             _buildFeatureCard(
               context,
               '🪪 Permit Details',
@@ -231,6 +247,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Icons.card_membership,
               AppColors.teal,
             ),
+
             _buildFeatureCard(
               context,
               '📜 Certificates',
@@ -238,6 +255,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Icons.verified,
               AppColors.green,
             ),
+
             _buildFeatureCard(
               context,
               '⚠ Accident Reports',
@@ -245,6 +263,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Icons.report_problem,
               AppColors.red,
             ),
+
             _buildFeatureCard(
               context,
               '🔧 Maintenance & Repairs',
@@ -252,6 +271,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Icons.handyman,
               AppColors.yellow,
             ),
+
             _buildFeatureCard(
               context,
               '📣 Feedback & Complaints',
@@ -259,6 +279,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Icons.feedback,
               AppColors.aqua,
             ),
+
             _buildFeatureCard(
               context,
               '🚨 Emergency Alerts',
@@ -272,6 +293,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // KPI CARD WIDGET
+  // ---------------------------------------------------------------------------
   Widget _buildKPICard(String title, String value, IconData icon, Color color) {
     return Card(
       color: AppColors.navy.withOpacity(0.4),
@@ -307,13 +331,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // FEATURE CARD WIDGET
+  // ---------------------------------------------------------------------------
   Widget _buildFeatureCard(
     BuildContext context,
     String title,
     String subtitle,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 4,
@@ -322,7 +350,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {},
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -351,12 +379,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+              Icon(Icons.arrow_forward_ios,
+                  size: 16, color: Colors.grey[400]),
             ],
           ),
         ),

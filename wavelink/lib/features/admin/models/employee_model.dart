@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class Employee {
   final String id;
   final String name;
@@ -9,7 +7,8 @@ class Employee {
   final String phone;
   final String status;
   final String joinDate;
-  final Color avatarColor;
+  final String accountType; // <-- ADDED THIS
+  final dynamic avatarColor;
 
   Employee({
     required this.id,
@@ -20,6 +19,26 @@ class Employee {
     required this.phone,
     required this.status,
     required this.joinDate,
+    required this.accountType, // <-- ADDED THIS
     required this.avatarColor,
   });
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      id: json['id'].toString(),
+      name: json['full_name'] ??
+          json['employee_name'] ??
+          json['username'] ??
+          json['name'] ??
+          "Unknown",
+      role: json['role'] ?? "Unknown",
+      department: json['department'] ?? "General",
+      email: json['email'] ?? "",
+      phone: json['phone'] ?? "",
+      status: json['status'] ?? "Inactive",
+      joinDate: json['join_date'] ?? "",
+      accountType: json['account_type'] ?? "employee", // <-- FIXED
+      avatarColor: null,
+    );
+  }
 }
