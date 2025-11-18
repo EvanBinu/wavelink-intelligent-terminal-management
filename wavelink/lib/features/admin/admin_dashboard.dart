@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:wavelink/features/admin/ai_recommendations_screen.dart';
 import 'package:wavelink/features/admin/analytics_dashboard.dart';
@@ -13,6 +14,35 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   OverlayEntry? _notificationOverlay;
+
+  // ===== TERMINAL COUNT VARIABLES =====
+  int _terminalCount = 0;
+  bool _isTerminalLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTerminalCount();
+  }
+
+  // ---------------------------------------------------------------------------
+  // FETCH TERMINAL COUNT FROM SUPABASE
+  // ---------------------------------------------------------------------------
+  Future<void> _fetchTerminalCount() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('terminals')
+          .select('id');
+
+      setState(() {
+        _terminalCount = (response as List).length;
+        _isTerminalLoading = false;
+      });
+    } catch (e) {
+      print("❌ Error fetching terminal count: $e");
+      setState(() => _isTerminalLoading = false);
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // NOTIFICATION PANEL
@@ -179,7 +209,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Expanded(
                   child: _buildKPICard(
                     'Active Terminals',
-                    '12',
+                    _isTerminalLoading
+                        ? "..."
+                        : _terminalCount.toString(),
                     Icons.business,
                     AppColors.aqua,
                   ),
