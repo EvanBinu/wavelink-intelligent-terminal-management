@@ -7,7 +7,7 @@ import 'package:wavelink/core/constants/widgets/notification_dropdown.dart';
 import 'package:wavelink/features/employee/employee_history_screen.dart';
 
 class EmployeeDashboardScreen extends StatefulWidget {
-  final Map<String, dynamic> employeeData;   // FROM LOGIN PAGE
+  final Map<String, dynamic> employeeData;
 
   const EmployeeDashboardScreen({
     Key? key,
@@ -20,6 +20,9 @@ class EmployeeDashboardScreen extends StatefulWidget {
 }
 
 class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
+  final supabase = Supabase.instance.client;
+
+  // Controllers
   final TextEditingController _certificateTitle = TextEditingController();
   final TextEditingController _repairTitle = TextEditingController();
   final TextEditingController _repairDescription = TextEditingController();
@@ -28,20 +31,49 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
 
   DateTime? _expiryDate;
 
-  // ----------------------------------------------------------------------------
-  // ⭐ CERTIFICATE UPLOAD DIALOG
-  // ----------------------------------------------------------------------------
+  String _repairPriority = "medium";
+  String _accidentSeverity = "medium";
+  String _involvedParty = "employee";
+
+  // ===========================================================================
+  // ⭐ LOG HISTORY (CERTIFICATE, REPAIR, ACCIDENT)
+  // ===========================================================================
+  Future<void> _logHistory({
+    required String eventType,
+    required Map<String, dynamic> details,
+  }) async {
+    final entry = {
+      "logged_by_id": widget.employeeData['id'],
+      "event_type": eventType,
+      "details": details,
+      "logged_at": DateTime.now().toIso8601String(),
+    };
+
+    try {
+      await supabase.from("history").insert(entry);
+      print("HISTORY LOGGED → $entry");
+    } catch (e) {
+      print("❌ HISTORY LOG ERROR: $e");
+    }
+  }
+
+  // ===========================================================================
+  // ⭐ CERTIFICATE DIALOG
+  // ===========================================================================
   void _showCertificateUploadDialog() {
     _certificateTitle.clear();
     _expiryDate = null;
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (_) => Dialog(
         backgroundColor: AppColors.darkBlue,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.65,
+          ),
           child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 const Text("Upload Certificate",
@@ -89,8 +121,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 22),
-
+                const SizedBox(height: 20),
                 _uploadButton("Upload Certificate", _uploadCertificate),
               ],
             ),
@@ -100,20 +131,23 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
-  // ----------------------------------------------------------------------------
-  // ⭐ REPAIR UPLOAD DIALOG
-  // ----------------------------------------------------------------------------
+  // ===========================================================================
+  // ⭐ REPAIR DIALOG
+  // ===========================================================================
   void _showRepairUploadDialog() {
     _repairTitle.clear();
     _repairDescription.clear();
+    _repairPriority = "medium";
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (_) => Dialog(
         backgroundColor: AppColors.darkBlue,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.70),
           child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 const Text("Report Repair / Upgrade",
@@ -123,7 +157,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 TextField(
                   controller: _repairTitle,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration("Repair Title"),
+                  decoration: _inputDecoration("Repair Subject"),
                 ),
 
                 const SizedBox(height: 16),
@@ -135,7 +169,25 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   decoration: _inputDecoration("Description"),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: _repairPriority,
+                  dropdownColor: AppColors.darkBlue,
+                  decoration: _inputDecoration("Priority"),
+                  items: ["low", "medium", "high"]
+                      .map((v) => DropdownMenuItem(
+                    value: v,
+                    child: Text(v.toUpperCase(),
+                        style: const TextStyle(color: Colors.white)),
+                  ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _repairPriority = v);
+                  },
+                ),
+
+                const SizedBox(height: 20),
                 _uploadButton("Upload Repair Report", _uploadRepair),
               ],
             ),
@@ -145,20 +197,22 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
-  // ----------------------------------------------------------------------------
-  // ⭐ ACCIDENT UPLOAD DIALOG
-  // ----------------------------------------------------------------------------
+  // ===========================================================================
+  // ⭐ ACCIDENT DIALOG
+  // ===========================================================================
   void _showAccidentUploadDialog() {
     _accidentTitle.clear();
     _accidentDescription.clear();
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (_) => Dialog(
         backgroundColor: AppColors.darkBlue,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
           child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 const Text("Report Accident",
@@ -168,7 +222,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 TextField(
                   controller: _accidentTitle,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration("Accident Title"),
+                  decoration: _inputDecoration("Accident Subject"),
                 ),
 
                 const SizedBox(height: 16),
@@ -177,10 +231,46 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   controller: _accidentDescription,
                   maxLines: 4,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration("Description"),
+                  decoration: _inputDecoration("Narrative / Description"),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: _accidentSeverity,
+                  dropdownColor: AppColors.darkBlue,
+                  decoration: _inputDecoration("Severity"),
+                  items: ["low", "medium", "high"]
+                      .map((v) => DropdownMenuItem(
+                    value: v,
+                    child: Text(v.toUpperCase(),
+                        style: const TextStyle(color: Colors.white)),
+                  ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _accidentSeverity = v);
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: _involvedParty,
+                  dropdownColor: AppColors.darkBlue,
+                  decoration: _inputDecoration("Involved Party"),
+                  items: ["employee", "passenger", "other"]
+                      .map((v) => DropdownMenuItem(
+                    value: v,
+                    child: Text(v.toUpperCase(),
+                        style: const TextStyle(color: Colors.white)),
+                  ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _involvedParty = v);
+                  },
+                ),
+
+                const SizedBox(height: 20),
                 _uploadButton("Upload Accident Report", _uploadAccident),
               ],
             ),
@@ -190,82 +280,188 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
-  // ============================================================================  
-  // ⭐ UPLOAD FUNCTIONS (CERTIFICATE / REPAIR / ACCIDENT)
-  // ============================================================================
+  // ===========================================================================
+  // ⭐ FILE PICKER
+  // ===========================================================================
+  Future<PlatformFile?> _pickFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx'],
+      );
+      return result?.files.single;
+    } catch (e) {
+      print("File pick error: $e");
+      return null;
+    }
+  }
 
+  // ===========================================================================
+  // ⭐ UPLOAD TO SUPABASE STORAGE
+  // ===========================================================================
+  Future<Map<String, dynamic>> _uploadFileToBucket(PlatformFile picked) async {
+    final bytes = await File(picked.path!).readAsBytes();
+    final fileName =
+        "${DateTime.now().millisecondsSinceEpoch}_${picked.name}";
+
+    await supabase.storage.from("pdfs").uploadBinary(
+      fileName,
+      bytes,
+      fileOptions: const FileOptions(upsert: true),
+    );
+
+    final url = await supabase.storage
+        .from("pdfs")
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+
+    return {"name": fileName, "url": url};
+  }
+
+  // ===========================================================================
+  // ⭐ CERTIFICATE UPLOAD + HISTORY
+  // ===========================================================================
   Future<void> _uploadCertificate() async {
-    if (_certificateTitle.text.isEmpty || _expiryDate == null) return _error();
+    if (_certificateTitle.text.isEmpty || _expiryDate == null) {
+      return _error();
+    }
 
     Navigator.pop(context);
+
     final picked = await _pickFile();
     if (picked == null) return;
 
     final file = await _uploadFileToBucket(picked);
 
-    await _insertToTable(
-      table: "certificates",
-      data: {
-        "employee_id": widget.employeeData['id'],
-        "employee_name": widget.employeeData['full_name'],
-        "title": _certificateTitle.text.trim(),
-        "file_name": file['name'],
-        "file_url": file['url'],
-        "expiry_date": _expiryDate!.toIso8601String(),
-        "status": false,
-      },
-    );
+    final data = {
+      "employee_id": widget.employeeData['id'],
+      "certificate_name": _certificateTitle.text.trim(),
+      "type": "certificate",
+      "file_name": file['name'],
+      "file_url": file['url'],
+      "expiry_date": _expiryDate!.toIso8601String(),
+      "status": "pending",
+    };
+
+    try {
+      await supabase.from("certificates").insert(data);
+
+      await _logHistory(
+        eventType: "certificate",
+        details: data,
+      );
+
+      _success("Certificate uploaded successfully!");
+    } catch (e) {
+      _failure("Upload failed: $e");
+    }
   }
 
+  // ===========================================================================
+  // ⭐ REPAIR UPLOAD + HISTORY
+  // ===========================================================================
   Future<void> _uploadRepair() async {
-    if (_repairTitle.text.isEmpty) return _error();
+    if (_repairTitle.text.isEmpty || _repairDescription.text.isEmpty) {
+      return _error();
+    }
 
     Navigator.pop(context);
+
     final picked = await _pickFile();
     if (picked == null) return;
 
     final file = await _uploadFileToBucket(picked);
 
-    await _insertToTable(
-      table: "repairs",
-      data: {
-        "employee_id": widget.employeeData['id'],
-        "employee_name": widget.employeeData['full_name'],
-        "title": _repairTitle.text.trim(),
-        "description": _repairDescription.text.trim(),
-        "file_name": file['name'],
-        "file_url": file['url'],
-        "status": false,
-      },
-    );
+    final data = {
+      "reported_by_id": widget.employeeData['id'],
+      "terminal_id": widget.employeeData['terminal_id'],
+      "subject": _repairTitle.text.trim(),
+      "description": _repairDescription.text.trim(),
+      "priority": _repairPriority,
+      "status": "pending",
+      "reported_at": DateTime.now().toIso8601String(),
+      "file_name": file['name'],
+      "file_url": file['url'],
+    };
+
+    try {
+      await supabase.from("repairs").insert(data);
+
+      await _logHistory(
+        eventType: "repair",
+        details: data,
+      );
+
+      _success("Repair report submitted!");
+    } catch (e) {
+      _failure("Repair upload failed: $e");
+    }
   }
 
+  // ===========================================================================
+  // ⭐ ACCIDENT UPLOAD + HISTORY
+  // ===========================================================================
   Future<void> _uploadAccident() async {
-    if (_accidentTitle.text.isEmpty) return _error();
+    if (_accidentTitle.text.isEmpty || _accidentDescription.text.isEmpty) {
+      return _error();
+    }
 
     Navigator.pop(context);
+
     final picked = await _pickFile();
     if (picked == null) return;
 
     final file = await _uploadFileToBucket(picked);
 
-    await _insertToTable(
-      table: "accidents",
-      data: {
-        "employee_id": widget.employeeData['id'],
-        "employee_name": widget.employeeData['full_name'],
-        "title": _accidentTitle.text.trim(),
-        "description": _accidentDescription.text.trim(),
-        "file_name": file['name'],
-        "file_url": file['url'],
-        "status": false,
-      },
+    final data = {
+      "reported_by_id": widget.employeeData['id'],
+      "terminal_id": widget.employeeData['terminal_id'],
+      "accident_time": DateTime.now().toIso8601String(),
+      "subject": _accidentTitle.text.trim(),
+      "narrative": _accidentDescription.text.trim(),
+      "severity": _accidentSeverity,
+      "involved_party": _involvedParty,
+      "status": "pending",
+      "file_name": file['name'],
+      "file_url": file['url'],
+    };
+
+    try {
+      await supabase.from("accidents").insert(data);
+
+      await _logHistory(
+        eventType: "accident",
+        details: data,
+      );
+
+      _success("Accident report submitted!");
+    } catch (e) {
+      _failure("Accident upload failed: $e");
+    }
+  }
+
+  // ===========================================================================
+  // ⭐ UTILITIES
+  // ===========================================================================
+  void _error() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please fill all fields"),
+        backgroundColor: AppColors.red,
+      ),
     );
   }
 
-  // ============================================================================  
-  // ⭐ HELPER FUNCTIONS
-  // ============================================================================
+  void _success(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: AppColors.green),
+    );
+  }
+
+  void _failure(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
+  }
 
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
@@ -277,91 +473,18 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
-  void _error() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Please fill all fields"),
-        backgroundColor: AppColors.red,
-      ),
-    );
-  }
-
-  Widget _uploadButton(String text, Function() onTap) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: const Icon(Icons.upload_file, color: Colors.white),
-      label: Text(text),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.green,
-        foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  Future<PlatformFile?> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx'],
-    );
-    return result?.files.single;
-  }
-
-  Future<Map<String, dynamic>> _uploadFileToBucket(PlatformFile picked) async {
-    final supabase = Supabase.instance.client;
-
-    final path = picked.path!;
-    final bytes = await File(path).readAsBytes();
-
-    final fileName = "${DateTime.now().millisecondsSinceEpoch}_${picked.name}";
-
-    await supabase.storage.from("pdfs").uploadBinary(
-          fileName,
-          bytes,
-          fileOptions: const FileOptions(upsert: true),
-        );
-
-    final url = await supabase.storage
-        .from("pdfs")
-        .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-    return {"name": fileName, "url": url};
-  }
-
-  Future<void> _insertToTable(
-      {required String table, required Map<String, dynamic> data}) async {
-    try {
-      await Supabase.instance.client.from(table).insert(data);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$table submitted successfully!"),
-          backgroundColor: AppColors.green,
-        ),
-      );
-    } catch (e) {
-      print("ERROR: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Upload failed: $e"),
-          backgroundColor: AppColors.red,
-        ),
-      );
-    }
-  }
-
-  // ============================================================================  
-  // ⭐ UI (UNCHANGED EXCEPT BUTTON ACTIONS)
-  // ============================================================================
-
+  // ===========================================================================
+  // ⭐ UI
+  // ===========================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: AppBar(
-        title: const Text('Employee Dashboard', style: TextStyle(color: Colors.white)),
+        title: const Text('Employee Dashboard',
+            style: TextStyle(color: Colors.white)),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppColors.headerGradient),
-        ),
+            decoration: const BoxDecoration(gradient: AppColors.headerGradient)),
         elevation: 4,
         actions: [
           IconButton(
@@ -369,8 +492,14 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
             onPressed: () => NotificationDropdown.toggle(
               context,
               onViewAll: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const EmployeeHistoryScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EmployeeHistoryScreen(
+                      employeeData: widget.employeeData,
+                    ),
+                  ),
+                );
               },
             ),
           ),
@@ -382,8 +511,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Quick Actions',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+            const Text(
+              'Quick Actions',
+              style: TextStyle(
+                  fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
             const SizedBox(height: 20),
 
             _buildCard(
@@ -412,15 +544,37 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
 
             _buildCard(
               title: "📊 My Reports / History",
-              subtitle: "View your submitted reports",
+              subtitle: "Your previous reports",
               icon: Icons.history,
               color: AppColors.teal,
               onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const EmployeeHistoryScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EmployeeHistoryScreen(
+                      employeeData: widget.employeeData,
+                    ),
+                  ),
+                );
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _uploadButton(String text, Function() onTap) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.upload_file, color: Colors.white),
+      label: Text(text),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.green,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
     );
@@ -450,13 +604,17 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(subtitle, style: const TextStyle(color: Colors.white70)),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+              const Icon(Icons.arrow_forward_ios,
+                  color: Colors.white70, size: 16),
             ],
           ),
         ),
