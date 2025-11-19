@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
-import 'package:wavelink/features/admin/ai_recommendations_screen.dart';
-import 'package:wavelink/features/admin/analytics_dashboard.dart';
+
+// ADMIN SCREENS
 import 'package:wavelink/features/admin/employee_management_screen.dart';
+import 'package:wavelink/features/admin/admin_documents_screen.dart';
+import 'package:wavelink/features/admin/analytics_dashboard.dart';
+import 'package:wavelink/features/admin/ai_recommendations_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -15,7 +18,6 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   OverlayEntry? _notificationOverlay;
 
-  // ===== TERMINAL COUNT VARIABLES =====
   int _terminalCount = 0;
   bool _isTerminalLoading = true;
 
@@ -26,26 +28,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // FETCH TERMINAL COUNT FROM SUPABASE
+  // FETCH TERMINAL COUNT
   // ---------------------------------------------------------------------------
   Future<void> _fetchTerminalCount() async {
     try {
-      final response = await Supabase.instance.client
-          .from('terminals')
-          .select('id');
+      final response =
+          await Supabase.instance.client.from('terminals').select('id');
 
       setState(() {
         _terminalCount = (response as List).length;
         _isTerminalLoading = false;
       });
     } catch (e) {
-      print("❌ Error fetching terminal count: $e");
+      print("❌ Terminal count error: $e");
       setState(() => _isTerminalLoading = false);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // NOTIFICATION PANEL
+  // NOTIFICATION DROPDOWN
   // ---------------------------------------------------------------------------
   void _toggleNotifications(BuildContext context) {
     if (_notificationOverlay != null) {
@@ -80,21 +81,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildNotificationItem(
-                  '⚙ System Check',
-                  'Terminal 2 maintenance scheduled',
-                  AppColors.aqua,
-                ),
+                    '⚙ System Check',
+                    'Terminal 2 maintenance scheduled',
+                    AppColors.aqua),
                 _buildNotificationItem(
-                  '🚨 New Alert',
-                  'Emergency signal received from Dock 5',
-                  AppColors.red,
-                ),
+                    '🚨 New Alert', 'Emergency signal from Dock 5', AppColors.red),
                 _buildNotificationItem(
-                  '🧾 Report Update',
-                  '5 new safety reports submitted',
-                  AppColors.green,
-                ),
-                const Divider(color: Colors.white24),
+                    '🧾 Reports', '5 new safety reports submitted', AppColors.green),
+
+                const Divider(color: Colors.white54),
                 TextButton(
                   onPressed: () {
                     _notificationOverlay?.remove();
@@ -102,9 +97,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   },
                   child: const Text(
                     'View All Notifications',
-                    style: TextStyle(color: AppColors.aqua, fontSize: 14),
+                    style: TextStyle(color: AppColors.aqua),
                   ),
-                ),
+                )
               ],
             ),
           ),
@@ -115,13 +110,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     overlay.insert(_notificationOverlay!);
   }
 
-  Widget _buildNotificationItem(String title, String subtitle, Color color) {
+  Widget _buildNotificationItem(
+      String title, String subtitle, Color color) {
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
         radius: 16,
-        backgroundColor: color.withOpacity(0.8),
+        backgroundColor: color.withOpacity(0.85),
         child: const Icon(Icons.notifications, color: Colors.white, size: 16),
       ),
       title: Text(
@@ -137,20 +133,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // MAIN UI
+  // UI
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
+
+      // -----------------------------------------------------------------------
+      // APP BAR
+      // -----------------------------------------------------------------------
       appBar: AppBar(
-        title: const Text(
-          'Admin Dashboard',
-          style: TextStyle(color: Colors.white),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppColors.headerGradient),
-        ),
+        title: const Text('Admin Dashboard',
+            style: TextStyle(color: Colors.white)),
+        flexibleSpace:
+            Container(decoration: const BoxDecoration(gradient: AppColors.headerGradient)),
         elevation: 4,
         actions: [
           IconButton(
@@ -185,7 +182,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
 
       // -----------------------------------------------------------------------
-      // BODY
+      // MAIN BODY
       // -----------------------------------------------------------------------
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -196,22 +193,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               'Control Center',
               style: TextStyle(
                 fontSize: 26,
-                fontWeight: FontWeight.bold,
                 color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // Row 1 KPIs
+            // ----------------------------- KPIs ------------------------------
             Row(
               children: [
                 Expanded(
                   child: _buildKPICard(
                     'Active Terminals',
-                    _isTerminalLoading
-                        ? "..."
-                        : _terminalCount.toString(),
+                    _isTerminalLoading ? "..." : "$_terminalCount",
                     Icons.business,
                     AppColors.aqua,
                   ),
@@ -230,7 +225,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             const SizedBox(height: 16),
 
-            // Row 2 KPIs
             Row(
               children: [
                 Expanded(
@@ -255,11 +249,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             const SizedBox(height: 32),
 
-            // Feature cards
+            // ------------------------ FEATURE CARDS --------------------------
             _buildFeatureCard(
-              context,
               '👨‍💼 Employee Management',
-              'Add, view, and update employees',
+              'Add, view and update employees',
               Icons.people,
               AppColors.aqua,
               onTap: () {
@@ -273,51 +266,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
 
             _buildFeatureCard(
-              context,
-              '🪪 Permit Details',
-              'Track active and expired permits',
-              Icons.card_membership,
-              AppColors.teal,
-            ),
-
-            _buildFeatureCard(
-              context,
-              '📜 Certificates',
-              'Manage uploaded safety files',
-              Icons.verified,
+              '📜 Documents & Reports',
+              'Certifications, Repairs & Accident Reports',
+              Icons.folder_open,
               AppColors.green,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminDocumentsScreen(),
+                  ),
+                );
+              },
             ),
 
             _buildFeatureCard(
-              context,
-              '⚠ Accident Reports',
-              'View incidents by severity',
-              Icons.report_problem,
-              AppColors.red,
-            ),
-
-            _buildFeatureCard(
-              context,
-              '🔧 Maintenance & Repairs',
-              'Track ongoing and completed tasks',
-              Icons.handyman,
-              AppColors.yellow,
-            ),
-
-            _buildFeatureCard(
-              context,
-              '📣 Feedback & Complaints',
-              'View user input and sentiment analytics',
-              Icons.feedback,
-              AppColors.aqua,
-            ),
-
-            _buildFeatureCard(
-              context,
               '🚨 Emergency Alerts',
               'Live alerts with response status',
               Icons.emergency,
               AppColors.red,
+            ),
+
+            _buildFeatureCard(
+              '🔧 Maintenance & Repairs',
+              'Track ongoing and completed tasks',
+              Icons.handyman,
+              AppColors.yellow,
             ),
           ],
         ),
@@ -326,9 +300,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // KPI CARD WIDGET
+  // KPI CARD
   // ---------------------------------------------------------------------------
-  Widget _buildKPICard(String title, String value, IconData icon, Color color) {
+  Widget _buildKPICard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       color: AppColors.navy.withOpacity(0.4),
       shadowColor: color.withOpacity(0.5),
@@ -339,12 +314,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 32),
+            Icon(icon, color: color, size: 34),
             const SizedBox(height: 12),
             Text(
               value,
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 34,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -352,10 +327,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const SizedBox(height: 4),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
+              style: const TextStyle(color: Colors.white70),
             ),
           ],
         ),
@@ -364,10 +336,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // FEATURE CARD WIDGET
+  // FEATURE CARD
   // ---------------------------------------------------------------------------
   Widget _buildFeatureCard(
-    BuildContext context,
     String title,
     String subtitle,
     IconData icon,
@@ -377,8 +348,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 4,
-      color: AppColors.navy.withOpacity(0.4),
       shadowColor: color.withOpacity(0.4),
+      color: AppColors.navy.withOpacity(0.45),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -400,27 +371,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
+                    Text(title,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white)),
+                    const SizedBox(height: 5),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: Colors.white70),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios,
-                  size: 16, color: Colors.grey[400]),
+              const Icon(Icons.arrow_forward_ios,
+                  size: 16, color: Colors.white70)
             ],
           ),
         ),
