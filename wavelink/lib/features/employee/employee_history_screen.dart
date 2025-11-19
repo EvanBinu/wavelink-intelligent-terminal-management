@@ -1,16 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 
-class EmployeeHistoryScreen extends StatelessWidget {
+class EmployeeHistoryScreen extends StatefulWidget {
   const EmployeeHistoryScreen({super.key});
 
+  @override
+  State<EmployeeHistoryScreen> createState() => _EmployeeHistoryScreenState();
+}
+
+class _EmployeeHistoryScreenState extends State<EmployeeHistoryScreen> {
+  final supabase = Supabase.instance.client;
+
+  late Future<List<dynamic>> _historyFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyFuture = _fetchHistory();
+  }
+
+  // ---------------------------------------------------------------------------
+  // ⭐ FETCH EMPLOYEE HISTORY FROM SUPABASE
+  // ---------------------------------------------------------------------------
+  Future<List<dynamic>> _fetchHistory() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      print("❌ No logged-in user!");
+      return [];
+    }
+
+    final response = await supabase
+        .from("history")
+        .select()
+        .eq("employee_id", user.id)
+        .order("uploaded_at", ascending: false);
+
+    return response;
+  }
+
+  // ---------------------------------------------------------------------------
+  // ⭐ UI
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: AppBar(
         title: const Text(
-          'My Reports & SOS History',
+          'My Upload History',
           style: TextStyle(color: Colors.white),
         ),
         flexibleSpace: Container(
@@ -20,129 +59,95 @@ class EmployeeHistoryScreen extends StatelessWidget {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            _buildSectionTitle('🧱 Maintenance & Repair Logs'),
-            _buildReportTile(
-              title: 'Generator Repair Completed',
-              date: '03 Nov 2025',
-              type: 'Repair Report',
-              color: AppColors.aqua,
-            ),
-            _buildReportTile(
-              title: 'Dock Light Replacement',
-              date: '29 Oct 2025',
-              type: 'Upgrade Report',
-              color: AppColors.green,
-            ),
 
-            const SizedBox(height: 24),
+      body: FutureBuilder<List<dynamic>>(
+        future: _historyFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.aqua),
+            );
+          }
 
-            _buildSectionTitle('⚠️ Accident / Issue Reports'),
-            _buildReportTile(
-              title: 'Fuel Leak near Terminal 2',
-              date: '22 Oct 2025',
-              type: 'Accident Report',
-              color: AppColors.red,
-            ),
-            _buildReportTile(
-              title: 'Slip Hazard in Waiting Area',
-              date: '12 Oct 2025',
-              type: 'Safety Report',
-              color: AppColors.yellow,
-            ),
+          final history = snapshot.data!;
 
-            const SizedBox(height: 24),
+          if (history.isEmpty) {
+            return const Center(
+              child: Text(
+                "No history found",
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            );
+          }
 
-            _buildSectionTitle('🚨 SOS Alerts Triggered'),
-            _buildSosTile('Emergency during loading operation', '08 Sep 2025'),
-            _buildSosTile('Passenger fainted onboard', '14 Aug 2025'),
-          ],
-        ),
-      ),
-    );
-  }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: history.length,
+            itemBuilder: (context, index) {
+              final row = history[index];
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
+              final actionType = row['action_type']; // certificate / repair / accident
+              final title = row['action_title'];
+              final date = DateTime.parse(row['uploaded_at']);
+              final status = row['status'] == true ? "Approved" : "Pending";
 
-  Widget _buildReportTile({
-    required String title,
-    required String date,
-    required String type,
-    required Color color,
-  }) {
-    return Card(
-      color: AppColors.navy.withOpacity(0.5),
-      shadowColor: color.withOpacity(0.3),
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.8),
-          child: const Icon(Icons.description, color: Colors.white),
-        ),
-        title: Text(title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          '$type • $date',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
-        onTap: () {
-          // later can open detailed report page
+              // Color & Icon based on type
+              IconData icon;
+              Color color;
+
+              switch (actionType) {
+                case "certificate":
+                  icon = Icons.verified;
+                  color = AppColors.green;
+                  break;
+
+                case "repair":
+                  icon = Icons.build;
+                  color = AppColors.aqua;
+                  break;
+
+                case "accident":
+                  icon = Icons.warning;
+                  color = AppColors.red;
+                  break;
+
+                default:
+                  icon = Icons.file_present;
+                  color = AppColors.yellow;
+              }
+
+              return Card(
+                color: AppColors.navy.withOpacity(0.5),
+                shadowColor: color.withOpacity(0.4),
+                elevation: 5,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: color.withOpacity(0.8),
+                    child: Icon(icon, color: Colors.white),
+                  ),
+                  title: Text(
+                    title,
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    "$actionType • ${date.toString().split(' ').first}\nStatus: $status",
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios,
+                      color: Colors.white54, size: 16),
+
+                  // TODO: Open PDF or detailed history page
+                  onTap: () {},
+                ),
+              );
+            },
+          );
         },
-      ),
-    );
-  }
-
-  Widget _buildSosTile(String description, String date) {
-    return Card(
-      color: AppColors.red.withOpacity(0.15),
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Container(
-          width: 46,
-          height: 46,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: AppColors.dangerGradient,
-            boxShadow: [
-              BoxShadow(color: Colors.redAccent, blurRadius: 12, spreadRadius: 2),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: const Text(
-            'SOS',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        title: Text(description,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          'Triggered on $date',
-          style: const TextStyle(color: Colors.white70),
-        ),
       ),
     );
   }

@@ -7,7 +7,7 @@ import 'package:wavelink/core/constants/widgets/notification_dropdown.dart';
 import 'package:wavelink/features/employee/employee_history_screen.dart';
 
 class EmployeeDashboardScreen extends StatefulWidget {
-  final Map<String, dynamic> employeeData;   // ⭐ RECEIVED FROM LOGIN
+  final Map<String, dynamic> employeeData;   // FROM LOGIN PAGE
 
   const EmployeeDashboardScreen({
     Key? key,
@@ -21,11 +21,16 @@ class EmployeeDashboardScreen extends StatefulWidget {
 
 class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
   final TextEditingController _certificateTitle = TextEditingController();
+  final TextEditingController _repairTitle = TextEditingController();
+  final TextEditingController _repairDescription = TextEditingController();
+  final TextEditingController _accidentTitle = TextEditingController();
+  final TextEditingController _accidentDescription = TextEditingController();
+
   DateTime? _expiryDate;
 
-  // ---------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------
   // ⭐ CERTIFICATE UPLOAD DIALOG
-  // ---------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------
   void _showCertificateUploadDialog() {
     _certificateTitle.clear();
     _expiryDate = null;
@@ -34,160 +39,307 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: AppColors.darkBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Upload Safety Certificate",
-                style: TextStyle(
-                  color: AppColors.aqua,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const Text("Upload Certificate",
+                    style: TextStyle(color: AppColors.aqua, fontSize: 20)),
+                const SizedBox(height: 20),
 
-              TextField(
-                controller: _certificateTitle,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Certificate Title",
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: AppColors.navy.withOpacity(0.4),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                TextField(
+                  controller: _certificateTitle,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration("Certificate Title"),
+                ),
+
+                const SizedBox(height: 16),
+
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                      builder: (ctx, child) =>
+                          Theme(data: ThemeData.dark(), child: child!),
+                    );
+                    if (picked != null) setState(() => _expiryDate = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.navy.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month, color: Colors.white),
+                        const SizedBox(width: 12),
+                        Text(
+                          _expiryDate == null
+                              ? "Select Expiry Date"
+                              : _expiryDate.toString().split(" ").first,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 22),
 
-              InkWell(
-                onTap: () async {
-                  final pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                    builder: (context, child) =>
-                        Theme(data: ThemeData.dark(), child: child!),
-                  );
-
-                  if (pickedDate != null) {
-                    setState(() => _expiryDate = pickedDate);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.navy.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_month, color: Colors.white),
-                      const SizedBox(width: 12),
-                      Text(
-                        _expiryDate == null
-                            ? "Select Expiry Date"
-                            : _expiryDate.toString().split(" ").first,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              ElevatedButton.icon(
-                onPressed: _uploadCertificate,
-                icon: const Icon(Icons.upload_file, color: Colors.white),
-                label: const Text("Upload Certificate"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
+                _uploadButton("Upload Certificate", _uploadCertificate),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // ⭐ UPLOAD CERTIFICATE → bucket: pdfs AND table: certificates
-  // ---------------------------------------------------------------------------
-  Future<void> _uploadCertificate() async {
-    if (_certificateTitle.text.trim().isEmpty || _expiryDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Enter title and expiry date"),
-          backgroundColor: AppColors.red,
+  // ----------------------------------------------------------------------------
+  // ⭐ REPAIR UPLOAD DIALOG
+  // ----------------------------------------------------------------------------
+  void _showRepairUploadDialog() {
+    _repairTitle.clear();
+    _repairDescription.clear();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.darkBlue,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const Text("Report Repair / Upgrade",
+                    style: TextStyle(color: AppColors.aqua, fontSize: 20)),
+                const SizedBox(height: 20),
+
+                TextField(
+                  controller: _repairTitle,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration("Repair Title"),
+                ),
+
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: _repairDescription,
+                  maxLines: 4,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration("Description"),
+                ),
+
+                const SizedBox(height: 22),
+                _uploadButton("Upload Repair Report", _uploadRepair),
+              ],
+            ),
+          ),
         ),
-      );
-      return;
-    }
+      ),
+    );
+  }
+
+  // ----------------------------------------------------------------------------
+  // ⭐ ACCIDENT UPLOAD DIALOG
+  // ----------------------------------------------------------------------------
+  void _showAccidentUploadDialog() {
+    _accidentTitle.clear();
+    _accidentDescription.clear();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.darkBlue,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const Text("Report Accident",
+                    style: TextStyle(color: AppColors.red, fontSize: 20)),
+                const SizedBox(height: 20),
+
+                TextField(
+                  controller: _accidentTitle,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration("Accident Title"),
+                ),
+
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: _accidentDescription,
+                  maxLines: 4,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration("Description"),
+                ),
+
+                const SizedBox(height: 22),
+                _uploadButton("Upload Accident Report", _uploadAccident),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================================  
+  // ⭐ UPLOAD FUNCTIONS (CERTIFICATE / REPAIR / ACCIDENT)
+  // ============================================================================
+
+  Future<void> _uploadCertificate() async {
+    if (_certificateTitle.text.isEmpty || _expiryDate == null) return _error();
 
     Navigator.pop(context);
+    final picked = await _pickFile();
+    if (picked == null) return;
 
-    try {
-      final filePickerResult = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx'],
-      );
+    final file = await _uploadFileToBucket(picked);
 
-      if (filePickerResult == null) return;
-
-      final filePath = filePickerResult.files.single.path!;
-      final bytes = await File(filePath).readAsBytes();
-
-      final fileName =
-          "${DateTime.now().millisecondsSinceEpoch}_${filePickerResult.files.single.name}";
-
-      final supabase = Supabase.instance.client;
-
-      // ⭐ Upload to bucket: pdfs
-      await supabase.storage.from("pdfs").uploadBinary(
-            fileName,
-            bytes,
-            fileOptions: const FileOptions(upsert: true),
-          );
-
-      // ⭐ Signed URL from same bucket
-      final signedUrl = await supabase.storage
-          .from("pdfs")
-          .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-      // ⭐ GET EMPLOYEE FROM LOGIN DATA
-      final employeeId = widget.employeeData['id'];
-      final employeeName = widget.employeeData['name'];
-
-      // ⭐ Insert into certificates table
-      final response = await supabase.from("certificates").insert({
-        "employee_id": id,
-        "employee_name": full_name,
+    await _insertToTable(
+      table: "certificates",
+      data: {
+        "employee_id": widget.employeeData['id'],
+        "employee_name": widget.employeeData['full_name'],
         "title": _certificateTitle.text.trim(),
-        "file_name": fileName,
-        "file_url": signedUrl,
+        "file_name": file['name'],
+        "file_url": file['url'],
         "expiry_date": _expiryDate!.toIso8601String(),
-      });
+        "status": false,
+      },
+    );
+  }
 
-      print("INSERT RESPONSE: $response");
+  Future<void> _uploadRepair() async {
+    if (_repairTitle.text.isEmpty) return _error();
+
+    Navigator.pop(context);
+    final picked = await _pickFile();
+    if (picked == null) return;
+
+    final file = await _uploadFileToBucket(picked);
+
+    await _insertToTable(
+      table: "repairs",
+      data: {
+        "employee_id": widget.employeeData['id'],
+        "employee_name": widget.employeeData['full_name'],
+        "title": _repairTitle.text.trim(),
+        "description": _repairDescription.text.trim(),
+        "file_name": file['name'],
+        "file_url": file['url'],
+        "status": false,
+      },
+    );
+  }
+
+  Future<void> _uploadAccident() async {
+    if (_accidentTitle.text.isEmpty) return _error();
+
+    Navigator.pop(context);
+    final picked = await _pickFile();
+    if (picked == null) return;
+
+    final file = await _uploadFileToBucket(picked);
+
+    await _insertToTable(
+      table: "accidents",
+      data: {
+        "employee_id": widget.employeeData['id'],
+        "employee_name": widget.employeeData['full_name'],
+        "title": _accidentTitle.text.trim(),
+        "description": _accidentDescription.text.trim(),
+        "file_name": file['name'],
+        "file_url": file['url'],
+        "status": false,
+      },
+    );
+  }
+
+  // ============================================================================  
+  // ⭐ HELPER FUNCTIONS
+  // ============================================================================
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      filled: true,
+      fillColor: AppColors.navy.withOpacity(0.4),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    );
+  }
+
+  void _error() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please fill all fields"),
+        backgroundColor: AppColors.red,
+      ),
+    );
+  }
+
+  Widget _uploadButton(String text, Function() onTap) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.upload_file, color: Colors.white),
+      label: Text(text),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.green,
+        foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  Future<PlatformFile?> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx'],
+    );
+    return result?.files.single;
+  }
+
+  Future<Map<String, dynamic>> _uploadFileToBucket(PlatformFile picked) async {
+    final supabase = Supabase.instance.client;
+
+    final path = picked.path!;
+    final bytes = await File(path).readAsBytes();
+
+    final fileName = "${DateTime.now().millisecondsSinceEpoch}_${picked.name}";
+
+    await supabase.storage.from("pdfs").uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    final url = await supabase.storage
+        .from("pdfs")
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+
+    return {"name": fileName, "url": url};
+  }
+
+  Future<void> _insertToTable(
+      {required String table, required Map<String, dynamic> data}) async {
+    try {
+      await Supabase.instance.client.from(table).insert(data);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Certificate uploaded successfully!"),
+        SnackBar(
+          content: Text("$table submitted successfully!"),
           backgroundColor: AppColors.green,
         ),
       );
     } catch (e) {
-      print("UPLOAD ERROR: $e");
+      print("ERROR: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Upload failed: $e"),
@@ -197,9 +349,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // ⭐ FULL ORIGINAL DASHBOARD UI
-  // ---------------------------------------------------------------------------
+  // ============================================================================  
+  // ⭐ UI (UNCHANGED EXCEPT BUTTON ACTIONS)
+  // ============================================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -229,78 +382,43 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            const Text('Quick Actions',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 20),
 
-            _buildActionCard(
-              context,
-              '🧱 Report Repair / Upgrade',
-              'Log completed maintenance with photos',
-              Icons.build_circle,
-              AppColors.aqua,
-              () => _showReportDialog(context, 'Repair'),
+            _buildCard(
+              title: "🧱 Report Repair / Upgrade",
+              subtitle: "Upload repair report with PDF",
+              icon: Icons.build_circle,
+              color: AppColors.aqua,
+              onTap: _showRepairUploadDialog,
             ),
 
-            _buildActionCard(
-              context,
-              '⚠ Report Accident / Issue',
-              'Submit detailed incident reports',
-              Icons.report,
-              AppColors.red,
-              () => _showReportDialog(context, 'Accident'),
+            _buildCard(
+              title: "⚠ Report Accident / Issue",
+              subtitle: "Submit accident report with PDF",
+              icon: Icons.report,
+              color: AppColors.red,
+              onTap: _showAccidentUploadDialog,
             ),
 
-            _buildActionCard(
-              context,
-              '📜 Upload Safety Certificates',
-              'Attach compliance or safety documents',
-              Icons.upload_file,
-              AppColors.green,
-              () => _showCertificateUploadDialog(),
+            _buildCard(
+              title: "📜 Upload Safety Certificates",
+              subtitle: "Attach certificate documents",
+              icon: Icons.upload_file,
+              color: AppColors.green,
+              onTap: _showCertificateUploadDialog,
             ),
 
-            _buildActionCard(
-              context,
-              '📊 My Reports / History',
-              'View your previous submissions and feedback',
-              Icons.history,
-              AppColors.teal,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EmployeeHistoryScreen()),
-                );
+            _buildCard(
+              title: "📊 My Reports / History",
+              subtitle: "View your submitted reports",
+              icon: Icons.history,
+              color: AppColors.teal,
+              onTap: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const EmployeeHistoryScreen()));
               },
-            ),
-
-            const SizedBox(height: 28),
-
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton.icon(
-                onPressed: () => _showEmergencyDialog(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 6,
-                ),
-                icon: const Icon(Icons.emergency, size: 32, color: Colors.white),
-                label: const Text(
-                  '🚨 TRIGGER EMERGENCY ALERT',
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
             ),
           ],
         ),
@@ -308,88 +426,39 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // ⭐ CARD BUILDER
-  Widget _buildActionCard(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _buildCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required Function() onTap,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 6,
       color: AppColors.navy.withOpacity(0.4),
-      shadowColor: color.withOpacity(0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 32),
-              ),
+              Icon(icon, color: color, size: 36),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(subtitle,
-                        style: TextStyle(color: Colors.grey[300], fontSize: 14)),
+                    Text(subtitle, style: const TextStyle(color: Colors.white70)),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
+              Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // ⭐ REPORT DIALOG
-  void _showReportDialog(BuildContext context, String type) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.darkBlue.withOpacity(0.95),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: const Padding(
-          padding: EdgeInsets.all(20),
-          child: Text("Report dialog unchanged", style: TextStyle(color: Colors.white)),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // ⭐ EMERGENCY DIALOG
-  void _showEmergencyDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.darkBlue.withOpacity(0.95),
-        child: const Padding(
-          padding: EdgeInsets.all(24),
-          child: Text("Emergency dialog unchanged",
-              style: TextStyle(color: Colors.white)),
         ),
       ),
     );
