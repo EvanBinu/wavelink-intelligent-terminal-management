@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isDarkMode = false;
   bool _isLoading = false;
-  bool _obscurePassword = true; // 👁 ADD THIS
+  bool _obscurePassword = true;
 
   final SupabaseClient _supabase = Supabase.instance.client;
 
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // PASSWORD FIELD WITH TOGGLE 👁
+                        // PASSWORD FIELD
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -113,8 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             labelText: 'Password',
                             labelStyle: TextStyle(color: hintColor),
                             prefixIcon: Icon(Icons.lock, color: hintColor),
-
-                            // 👁 Toggle Icon
                             suffixIcon: GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -128,7 +126,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: hintColor,
                               ),
                             ),
-
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: hintColor),
@@ -139,9 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 8),
 
+                        // FORGOT PASSWORD
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -153,7 +150,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: Text('Forgot Password?', style: TextStyle(color: hintColor)),
+                            child: Text('Forgot Password?',
+                                style: TextStyle(color: hintColor)),
                           ),
                         ),
 
@@ -186,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 16),
 
-                        // CREATE ACCOUNT LINK
+                        // CREATE ACCOUNT
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -240,7 +238,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// LOGIN FUNCTION — supports PBKDF2 & SCRYPT
+  // ---------------------------------------------------------------------------
+  // ⭐ LOGIN FUNCTION (Checks users table, passes user data forward)
+  // ---------------------------------------------------------------------------
   Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -255,6 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Fetch user manually (NO Supabase Auth)
       final user = await _supabase
           .from('users')
           .select()
@@ -282,9 +283,12 @@ class _LoginScreenState extends State<LoginScreen> {
         case 'admin':
           screen = const AdminDashboardScreen();
           break;
+
         case 'employee':
-          screen = const EmployeeDashboardScreen();
+          // PASS FULL USER DATA TO EMPLOYEE DASHBOARD
+          screen = EmployeeDashboardScreen(employeeData: user);
           break;
+
         default:
           screen = const PassengerDashboardScreen();
       }

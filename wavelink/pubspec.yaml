@@ -41,6 +41,9 @@ dependencies:
   convert: ^3.1.2
   cryptography: ^2.7.0
   encrypt: ^5.0.3
+  file_picker: ^10.3.6
+  flutter_pdfview: ^1.4.3
+  open_filex: ^4.7.0
   
 
 
