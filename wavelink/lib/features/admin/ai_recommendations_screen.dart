@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
 
@@ -13,56 +15,114 @@ class AIRecommendationsScreen extends StatefulWidget {
 class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
   bool _isAnalyzing = false;
 
-  final List<Map<String, dynamic>> _aiRecommendations = [
-    {
-      'terminal': 'Kochi North Terminal',
-      'risk': 'High',
-      'issueType': 'Electrical',
-      'confidence': 92,
-      'recommendation': 'Upgrade wiring system immediately',
-      'factors': [
-        'High humidity levels detected',
-        'Recent electrical incidents',
-        'Aging infrastructure',
-        'Frequent power fluctuations',
-      ],
-    },
-    {
-      'terminal': 'Kochi South Terminal',
-      'risk': 'Medium',
-      'issueType': 'Mechanical',
-      'confidence': 78,
-      'recommendation': 'Check pump maintenance schedule',
-      'factors': [
-        'Irregular maintenance history',
-        'Pump efficiency declining',
-        'Corrosion signs detected',
-      ],
-    },
-    {
-      'terminal': 'Fort Kochi Terminal',
-      'risk': 'Low',
-      'issueType': 'Structural',
-      'confidence': 65,
-      'recommendation': 'Monitor structural integrity quarterly',
-      'factors': ['Minor wear and tear', 'Regular maintenance up to date'],
-    },
-  ];
+  final TextEditingController _locationController = TextEditingController();
 
+  List<Map<String, dynamic>> _aiRecommendations = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApiKey();
+  }
+
+  // ============================================================
+  // 📌 LOAD GEMINI API KEY
+  // ============================================================
+  Future<void> _loadApiKey() async {
+    setState(() {
+      _apiKey = "AIzaSyALl4do2PDyIdYD774_f7ogHXgtNPevfAo".trim();
+    });
+  }
+
+  // ============================================================
+  // 📌 RUN ANALYSIS
+  // ============================================================
+  Future<void> _runNewAnalysis() async {
+    if (_apiKey == null || _apiKey!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Gemini API key missing!"),
+          backgroundColor: AppColors.red));
+      return;
+    }
+
+    final location = _locationController.text.trim();
+    if (location.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Please enter a location"),
+          backgroundColor: AppColors.red));
+      return;
+    }
+
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final model = GenerativeModel(
+        model: "gemini-2.5-flash",
+        apiKey: _apiKey!,
+      );
+
+      final prompt = '''
+Analyze the following location for suitability as a new Water Metro terminal:
+
+"$location"
+
+Return ONLY a JSON object in this exact structure:
+
+{
+  "location": string,
+  "suitability": "High" | "Medium" | "Low",
+  "pros": [ "point1", "point2", "point3", ... ],
+  "cons": [ "point1", "point2", "point3", ... ],
+  "finalRecommendation": string
+}
+
+STRICT RULES:
+- Return VALID JSON ONLY.
+- DO NOT include markdown, code fences, or explanations.
+- DO NOT add backticks.
+''';
+
+      final response = await model.generateContent([Content.text(prompt)]);
+
+      final raw = response.text?.trim() ?? "";
+
+      // remove unwanted formatting
+      final clean = raw
+          .replaceAll("```json", "")
+          .replaceAll("```", "")
+          .trim();
+
+      final decoded = jsonDecode(clean);
+
+      if (decoded is Map<String, dynamic>) {
+        setState(() => _aiRecommendations = [decoded]);
+      } else {
+        throw "Invalid JSON structure returned.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Location analysis completed!"),
+          backgroundColor: AppColors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("AI failed: $e"), backgroundColor: AppColors.red));
+    } finally {
+      setState(() => _isAnalyzing = false);
+    }
+  }
+
+  // ============================================================
+  // 📌 UI START
+  // ============================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: AppBar(
-        title: const Text(
-          'AI Insights Center',
-          style: TextStyle(color: Colors.white),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: AppColors.headerGradient,
-          ),
-        ),
+        title:
+            const Text('AI Insights Center', style: TextStyle(color: Colors.white)),
+        flexibleSpace:
+            Container(decoration: const BoxDecoration(gradient: AppColors.headerGradient)),
         elevation: 4,
         actions: [
           IconButton(
@@ -79,29 +139,56 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
           children: [
             _buildHeaderSection(),
             const SizedBox(height: 24),
+
+            // LOCATION INPUT
+            TextField(
+              controller: _locationController,
+              decoration: InputDecoration(
+                labelText: "Enter Location (e.g., Aluva)",
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: AppColors.navy.withOpacity(0.4),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              style: const TextStyle(color: Colors.white),
+            ),
+
+            const SizedBox(height: 20),
             _buildAnalysisButton(),
             const SizedBox(height: 32),
+
             const Text(
-              'Terminal Risk Analysis',
+              "Location Evaluation",
               style: TextStyle(
+                color: Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
               ),
             ),
+
             const SizedBox(height: 16),
-            ..._aiRecommendations.map((data) => _buildRecommendationCard(data)),
-            const SizedBox(height: 24),
-            _buildVisualizationSection(),
-            const SizedBox(height: 24),
-            _buildExportSection(),
+
+            if (_isAnalyzing)
+              const Center(
+                child: CircularProgressIndicator(color: AppColors.aqua),
+              )
+            else if (_aiRecommendations.isEmpty)
+              const Text(
+                "Enter a location and run analysis.",
+                style: TextStyle(color: Colors.white70),
+              )
+            else
+              ..._aiRecommendations.map(_buildRecommendationCard),
           ],
         ),
       ),
     );
   }
 
-  // HEADER CARD
+  // ============================================================
+  // 📌 HEADER CARD
+  // ============================================================
   Widget _buildHeaderSection() {
     return Card(
       color: AppColors.navy.withOpacity(0.4),
@@ -118,37 +205,25 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
                 color: AppColors.aqua.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child:
-                  const Icon(Icons.psychology, color: AppColors.aqua, size: 40),
+              child: const Icon(Icons.psychology,
+                  color: AppColors.aqua, size: 40),
             ),
             const SizedBox(width: 16),
             const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'AI Insights Center',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Data-driven recommendations to improve safety & efficiency',
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
-                ],
+              child: Text(
+                "AI Insights Center\nLocation suitability analysis",
+                style: TextStyle(color: Colors.white, fontSize: 15),
               ),
-            ),
+            )
           ],
         ),
       ),
     );
   }
 
-  // RUN ANALYSIS BUTTON
+  // ============================================================
+  // 📌 BUTTON
+  // ============================================================
   Widget _buildAnalysisButton() {
     return SizedBox(
       width: double.infinity,
@@ -163,14 +238,8 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
           shadowColor: AppColors.aqua.withOpacity(0.3),
         ),
         icon: _isAnalyzing
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+            ? const CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2)
             : const Icon(Icons.auto_awesome, color: Colors.white),
         label: Text(
           _isAnalyzing ? 'Analyzing...' : 'Run New AI Analysis',
@@ -184,141 +253,12 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
     );
   }
 
-  // RECOMMENDATION CARD
+  // ============================================================
+  // 📌 RESULT CARD
+  // ============================================================
   Widget _buildRecommendationCard(Map<String, dynamic> data) {
-    Color riskColor = _getRiskColor(data['risk']);
-    return Card(
-      color: AppColors.navy.withOpacity(0.4),
-      shadowColor: riskColor.withOpacity(0.3),
-      elevation: 5,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _showDetailedReport(context, data),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Terminal & Risk Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      data['terminal'],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: riskColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      data['risk'],
-                      style: TextStyle(
-                        color: riskColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+    final Color color = _getRiskColor(data["suitability"]);
 
-              // Details Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDetailItem(
-                      'Issue Type',
-                      data['issueType'],
-                      Icons.warning_amber,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildDetailItem(
-                      'Confidence',
-                      '${data['confidence']}%',
-                      Icons.show_chart,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Recommendation
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.aqua.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.lightbulb, color: AppColors.aqua, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        data['recommendation'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _showDetailedReport(context, data),
-                  icon: const Icon(Icons.visibility, size: 18, color: AppColors.aqua),
-                  label: const Text('View Details',
-                      style: TextStyle(color: AppColors.aqua)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value, IconData icon) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: Colors.white60),
-            const SizedBox(width: 4),
-            Text(label,
-                style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-      ],
-    );
-  }
-
-  // RISK VISUALIZATION
-  Widget _buildVisualizationSection() {
     return Card(
       color: AppColors.navy.withOpacity(0.4),
       shadowColor: AppColors.aqua.withOpacity(0.4),
@@ -329,245 +269,68 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Risk Distribution',
+            Text(data["location"],
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold)),
+
+            const SizedBox(height: 10),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                "Suitability: ${data['suitability']}",
                 style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildRiskIndicator('High', 1, AppColors.red),
-                _buildRiskIndicator('Medium', 1, Colors.orange),
-                _buildRiskIndicator('Low', 1, AppColors.green),
-              ],
+                    color: color, fontWeight: FontWeight.bold),
+              ),
             ),
+
+            const SizedBox(height: 20),
+
+            const Text("Pros:",
+                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            ...List<Widget>.from((data["pros"] as List)
+                .map((p) => Text("• $p",
+                    style: const TextStyle(color: Colors.white54)))),
+
+            const SizedBox(height: 16),
+
+            const Text("Cons:",
+                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            ...List<Widget>.from((data["cons"] as List)
+                .map((c) => Text("• $c",
+                    style: const TextStyle(color: Colors.white54)))),
+
+            const SizedBox(height: 20),
+
+            Text(data["finalRecommendation"],
+                style: const TextStyle(color: Colors.white, fontSize: 15)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRiskIndicator(String label, int count, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      ],
-    );
-  }
-
-  // EXPORT SECTION
-  Widget _buildExportSection() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _downloadReport,
-            icon: const Icon(Icons.download, color: AppColors.aqua),
-            label: const Text('Download PDF',
-                style: TextStyle(color: AppColors.aqua)),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.aqua),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _saveToTerminal,
-            icon: const Icon(Icons.attachment, color: Colors.white),
-            label: const Text('Attach to Terminal',
-                style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.red,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // COLORS + ACTIONS
-  Color _getRiskColor(String risk) {
-    switch (risk.toLowerCase()) {
-      case 'high':
-        return AppColors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
+  // ============================================================
+  // 📌 COLOR HELPER
+  // ============================================================
+  Color _getRiskColor(String suitability) {
+    switch (suitability.toLowerCase()) {
+      case "high":
         return AppColors.green;
       default:
         return Colors.grey;
     }
   }
 
-  Future<void> _runNewAnalysis() async {
-    setState(() => _isAnalyzing = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() => _isAnalyzing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI analysis completed successfully!'),
-          backgroundColor: AppColors.green,
-        ),
-      );
-    }
-  }
-
-  void _showDetailedReport(BuildContext context, Map<String, dynamic> data) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.navy.withOpacity(0.98),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.75,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) => SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white30,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(data['terminal'],
-                    style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                const SizedBox(height: 8),
-                const Text('Detailed AI Analysis Report',
-                    style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.yellow.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.help_outline, color: AppColors.yellow),
-                          SizedBox(width: 8),
-                          Text('Why this prediction?',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ...List<Widget>.from((data['factors'] as List).map(
-                        (factor) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            '• $factor',
-                            style: const TextStyle(
-                                fontSize: 14, color: Colors.white70),
-                          ),
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text('Recommended Actions',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.aqua.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(data['recommendation'],
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 15)),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white70)),
-                        child: const Text('Close',
-                            style: TextStyle(color: Colors.white70)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _downloadReport();
-                        },
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.aqua),
-                        child: const Text('Export Report',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
+  // ============================================================
+  // 📌 HISTORY DIALOG
+  // ============================================================
   void _showAIHistory(BuildContext context) {
     showDialog(
       context: context,
@@ -575,42 +338,35 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
         backgroundColor: AppColors.darkBlue.withOpacity(0.95),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('AI Analysis History',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              ListView.builder(
-                shrinkWrap: true,
-                itemCount: 3,
-                itemBuilder: (context, index) => ListTile(
-                  leading:
-                      const Icon(Icons.history, color: AppColors.aqua, size: 22),
-                  title: Text(
-                    'Analysis ${DateFormat('dd MMM yyyy').format(
-                      DateTime.now().subtract(Duration(days: index)),
-                    )}',
-                    style: const TextStyle(color: Colors.white),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("AI Analysis History",
+                    style: TextStyle(color: Colors.white, fontSize: 18)),
+                const SizedBox(height: 10),
+
+                ...List.generate(
+                  3,
+                  (i) => ListTile(
+                    leading:
+                        const Icon(Icons.history, color: AppColors.aqua),
+                    title: Text(
+                        "Analysis ${DateFormat('dd MMM').format(
+                          DateTime.now().subtract(Duration(days: i)),
+                        )}",
+                        style: const TextStyle(color: Colors.white)),
+                    subtitle: const Text("Model: Gemini 2.5 Flash",
+                        style: TextStyle(color: Colors.white70)),
                   ),
-                  subtitle: const Text('Model: Risk Prediction v2.1',
-                      style: TextStyle(color: Colors.white70)),
-                  trailing: const Icon(Icons.visibility,
-                      color: Colors.white54, size: 18),
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child:
-                    const Text('Close', style: TextStyle(color: AppColors.aqua)),
-              ),
-            ],
-          ),
+
+                const SizedBox(height: 12),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Close",
+                        style: TextStyle(color: AppColors.aqua))),
+              ]),
         ),
       ),
     );
