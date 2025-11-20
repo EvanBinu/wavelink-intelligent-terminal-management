@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:wavelink/core/constants/app_colors.dart';
 
@@ -17,7 +18,6 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
   String? _apiKey;
 
   final TextEditingController _locationController = TextEditingController();
-
   List<Map<String, dynamic>> _aiRecommendations = [];
 
   @override
@@ -27,30 +27,39 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen> {
   }
 
   // ============================================================
-  // 📌 LOAD GEMINI API KEY
+  // LOAD API KEY FROM SECRET FILE (No key in code!)
   // ============================================================
   Future<void> _loadApiKey() async {
-    setState(() {
-      _apiKey = "AIzaSyALl4do2PDyIdYD774_f7ogHXgtNPevfAo".trim();
-    });
+    try {
+      final key = await rootBundle.loadString("assets/secrets/gemini_key.txt");
+      setState(() => _apiKey = key.trim());
+    } catch (e) {
+      print("❌ Failed to load API key: $e");
+    }
   }
 
   // ============================================================
-  // 📌 RUN ANALYSIS
+  // RUN GEMINI LOCATION ANALYSIS
   // ============================================================
   Future<void> _runNewAnalysis() async {
     if (_apiKey == null || _apiKey!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Gemini API key missing!"),
-          backgroundColor: AppColors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Gemini API key missing or unreadable!"),
+          backgroundColor: AppColors.red,
+        ),
+      );
       return;
     }
 
     final location = _locationController.text.trim();
     if (location.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
           content: Text("Please enter a location"),
-          backgroundColor: AppColors.red));
+          backgroundColor: AppColors.red,
+        ),
+      );
       return;
     }
 
@@ -72,22 +81,21 @@ Return ONLY a JSON object in this exact structure:
 {
   "location": string,
   "suitability": "High" | "Medium" | "Low",
-  "pros": [ "point1", "point2", "point3", ... ],
-  "cons": [ "point1", "point2", "point3", ... ],
+  "pros": [ "point1", "point2", ... ],
+  "cons": [ "point1", "point2", ... ],
   "finalRecommendation": string
 }
 
 STRICT RULES:
-- Return VALID JSON ONLY.
-- DO NOT include markdown, code fences, or explanations.
-- DO NOT add backticks.
+- VALID JSON ONLY
+- NO markdown
+- NO backticks
+- NO explanation outside JSON
 ''';
 
       final response = await model.generateContent([Content.text(prompt)]);
-
       final raw = response.text?.trim() ?? "";
 
-      // remove unwanted formatting
       final clean = raw
           .replaceAll("```json", "")
           .replaceAll("```", "")
@@ -95,35 +103,38 @@ STRICT RULES:
 
       final decoded = jsonDecode(clean);
 
-      if (decoded is Map<String, dynamic>) {
-        setState(() => _aiRecommendations = [decoded]);
-      } else {
-        throw "Invalid JSON structure returned.";
-      }
+      setState(() => _aiRecommendations = [decoded]);
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
           content: Text("Location analysis completed!"),
-          backgroundColor: AppColors.green));
+          backgroundColor: AppColors.green,
+        ),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("AI failed: $e"), backgroundColor: AppColors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("AI failed: $e"),
+          backgroundColor: AppColors.red,
+        ),
+      );
     } finally {
       setState(() => _isAnalyzing = false);
     }
   }
 
   // ============================================================
-  // 📌 UI START
+  // UI
   // ============================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: AppBar(
-        title:
-            const Text('AI Insights Center', style: TextStyle(color: Colors.white)),
-        flexibleSpace:
-            Container(decoration: const BoxDecoration(gradient: AppColors.headerGradient)),
+        title: const Text('AI Insights Center', style: TextStyle(color: Colors.white)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppColors.headerGradient),
+        ),
         elevation: 4,
         actions: [
           IconButton(
@@ -141,16 +152,14 @@ STRICT RULES:
             _buildHeaderSection(),
             const SizedBox(height: 24),
 
-            // LOCATION INPUT
             TextField(
               controller: _locationController,
               decoration: InputDecoration(
-                labelText: "Enter Location (e.g., Aluva)",
+                labelText: "Enter location (e.g., Aluva)",
                 labelStyle: const TextStyle(color: Colors.white70),
                 filled: true,
                 fillColor: AppColors.navy.withOpacity(0.4),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               style: const TextStyle(color: Colors.white),
             ),
@@ -159,26 +168,11 @@ STRICT RULES:
             _buildAnalysisButton(),
             const SizedBox(height: 32),
 
-            const Text(
-              "Location Evaluation",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
             if (_isAnalyzing)
-              const Center(
-                child: CircularProgressIndicator(color: AppColors.aqua),
-              )
+              const Center(child: CircularProgressIndicator(color: AppColors.aqua))
             else if (_aiRecommendations.isEmpty)
-              const Text(
-                "Enter a location and run analysis.",
-                style: TextStyle(color: Colors.white70),
-              )
+              const Text("Enter a location and run analysis.",
+                  style: TextStyle(color: Colors.white70))
             else
               ..._aiRecommendations.map(_buildRecommendationCard),
           ],
@@ -187,43 +181,23 @@ STRICT RULES:
     );
   }
 
-  // ============================================================
-  // 📌 HEADER CARD
-  // ============================================================
+  // HEADER
   Widget _buildHeaderSection() {
     return Card(
       color: AppColors.navy.withOpacity(0.4),
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.aqua.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.psychology,
-                  color: AppColors.aqua, size: 40),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Text(
-                "AI Insights Center\nLocation suitability analysis",
-                style: TextStyle(color: Colors.white, fontSize: 15),
-              ),
-            )
-          ],
+      child: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text(
+          "AI Insights Center\nLocation Suitability Evaluation",
+          style: TextStyle(color: Colors.white, fontSize: 16),
         ),
       ),
     );
   }
 
-  // ============================================================
-  // 📌 BUTTON
-  // ============================================================
+  // BUTTON
   Widget _buildAnalysisButton() {
     return SizedBox(
       width: double.infinity,
@@ -235,8 +209,7 @@ STRICT RULES:
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         icon: _isAnalyzing
-            ? const CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2)
+            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
             : const Icon(Icons.auto_awesome, color: Colors.white),
         label: Text(
           _isAnalyzing ? "Analyzing..." : "Run Location Analysis",
@@ -246,11 +219,9 @@ STRICT RULES:
     );
   }
 
-  // ============================================================
-  // 📌 RESULT CARD
-  // ============================================================
+  // RESULT CARD
   Widget _buildRecommendationCard(Map<String, dynamic> data) {
-    final Color color = _getRiskColor(data["suitability"]);
+    final color = _getRiskColor(data["suitability"]);
 
     return Card(
       color: AppColors.navy.withOpacity(0.4),
@@ -263,11 +234,7 @@ STRICT RULES:
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(data["location"],
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold)),
-
+                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
 
             Container(
@@ -276,31 +243,21 @@ STRICT RULES:
                 color: color.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                "Suitability: ${data['suitability']}",
-                style: TextStyle(
-                    color: color, fontWeight: FontWeight.bold),
-              ),
+              child: Text("Suitability: ${data['suitability']}",
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold)),
             ),
 
             const SizedBox(height: 20),
-
-            const Text("Pros:",
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const Text("Pros:", style: TextStyle(color: Colors.white70, fontSize: 16)),
             ...List<Widget>.from((data["pros"] as List)
-                .map((p) => Text("• $p",
-                    style: const TextStyle(color: Colors.white54)))),
+                .map((p) => Text("• $p", style: const TextStyle(color: Colors.white54)))),
 
             const SizedBox(height: 16),
-
-            const Text("Cons:",
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const Text("Cons:", style: TextStyle(color: Colors.white70, fontSize: 16)),
             ...List<Widget>.from((data["cons"] as List)
-                .map((c) => Text("• $c",
-                    style: const TextStyle(color: Colors.white54)))),
+                .map((c) => Text("• $c", style: const TextStyle(color: Colors.white54)))),
 
             const SizedBox(height: 20),
-
             Text(data["finalRecommendation"],
                 style: const TextStyle(color: Colors.white, fontSize: 15)),
           ],
@@ -309,9 +266,6 @@ STRICT RULES:
     );
   }
 
-  // ============================================================
-  // 📌 COLOR HELPER
-  // ============================================================
   Color _getRiskColor(String suitability) {
     switch (suitability.toLowerCase()) {
       case "high":
@@ -325,9 +279,6 @@ STRICT RULES:
     }
   }
 
-  // ============================================================
-  // 📌 HISTORY DIALOG
-  // ============================================================
   void _showAIHistory(BuildContext context) {
     showDialog(
       context: context,
@@ -335,34 +286,24 @@ STRICT RULES:
         backgroundColor: AppColors.darkBlue.withOpacity(0.9),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("AI Analysis History",
-                    style: TextStyle(color: Colors.white, fontSize: 18)),
-                const SizedBox(height: 10),
-
-                ...List.generate(
-                  3,
-                  (i) => ListTile(
-                    leading:
-                        const Icon(Icons.history, color: AppColors.aqua),
-                    title: Text(
-                        "Analysis ${DateFormat('dd MMM').format(
-                          DateTime.now().subtract(Duration(days: i)),
-                        )}",
-                        style: const TextStyle(color: Colors.white)),
-                    subtitle: const Text("Model: Gemini 2.5 Flash",
-                        style: TextStyle(color: Colors.white70)),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Close",
-                        style: TextStyle(color: AppColors.aqua))),
-              ]),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text("AI Analysis History",
+                style: TextStyle(color: Colors.white, fontSize: 18)),
+            const SizedBox(height: 10),
+            ...List.generate(
+                3,
+                (i) => ListTile(
+                      leading: const Icon(Icons.history, color: AppColors.aqua),
+                      title: Text(
+                        "Analysis ${DateFormat('dd MMM').format(DateTime.now().subtract(Duration(days: i)))}",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    )),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close", style: TextStyle(color: AppColors.aqua)),
+            )
+          ]),
         ),
       ),
     );
