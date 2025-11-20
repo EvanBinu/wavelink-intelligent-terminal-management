@@ -44,3 +44,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 assets/secrets/supabase_keys.txt
+assets/secrets/gemini_key.txt
